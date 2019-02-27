@@ -18,9 +18,6 @@
  */
 package org.apache.iotdb.tsfile.read.query.executor;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.iotdb.tsfile.exception.filter.QueryFilterOptimizationException;
 import org.apache.iotdb.tsfile.file.metadata.ChunkMetaData;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
@@ -36,6 +33,10 @@ import org.apache.iotdb.tsfile.read.query.dataset.QueryDataSet;
 import org.apache.iotdb.tsfile.read.reader.series.FileSeriesReader;
 import org.apache.iotdb.tsfile.read.reader.series.FileSeriesReaderWithFilter;
 import org.apache.iotdb.tsfile.read.reader.series.FileSeriesReaderWithoutFilter;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TsFileExecutor implements QueryExecutor {
 
@@ -86,10 +87,16 @@ public class TsFileExecutor implements QueryExecutor {
 
     for (Path path : selectedPathList) {
       List<ChunkMetaData> chunkMetaDataList = metadataQuerier.getChunkMetaDataList(path);
-      FileSeriesReader seriesReader = new FileSeriesReaderWithoutFilter(chunkLoader,
-          chunkMetaDataList);
-      readersOfSelectedSeries.add(seriesReader);
-      dataTypes.add(chunkMetaDataList.get(0).getTsDataType());
+      // Handle the case where a sensor contains no data
+      if (chunkMetaDataList.isEmpty()) {
+        // TODO 20190227 jfeinauer: What should we do in this case?
+        dataTypes.add(TSDataType.TEXT);
+      } else {
+        FileSeriesReader seriesReader = new FileSeriesReaderWithoutFilter(chunkLoader,
+            chunkMetaDataList);
+        readersOfSelectedSeries.add(seriesReader);
+        dataTypes.add(chunkMetaDataList.get(0).getTsDataType());
+      }
     }
     return new DataSetWithoutTimeGenerator(selectedPathList, dataTypes, readersOfSelectedSeries);
   }
