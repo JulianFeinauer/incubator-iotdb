@@ -25,8 +25,11 @@ import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.crud.FilterOperator;
+import org.apache.iotdb.db.qp.logical.crud.InsertJsonOperator;
+import org.apache.iotdb.db.qp.logical.crud.InsertOperator;
 import org.apache.iotdb.db.qp.logical.crud.SFWOperator;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.strategy.ParseDriver;
 import org.apache.iotdb.db.qp.strategy.PhysicalGenerator;
 import org.apache.iotdb.db.qp.strategy.optimizer.ConcatPathOptimizer;
@@ -44,99 +47,105 @@ import java.util.Set;
  */
 public class Planner {
 
-  protected ParseDriver parseDriver;
+    protected ParseDriver parseDriver;
 
-  public Planner() {
-    this.parseDriver = new ParseDriver();
-  }
-
-  @TestOnly
-  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr)
-      throws QueryProcessException {
-    IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
-    return parseSQLToPhysicalPlan(sqlStr, config.getZoneID());
-  }
-
-  public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId)
-      throws QueryProcessException {
-    Operator operator = parseDriver.parse(sqlStr, zoneId);
-    operator = logicalOptimize(operator);
-    PhysicalGenerator physicalGenerator = new PhysicalGenerator();
-    return physicalGenerator.transformToPhysicalPlan(operator);
-  }
-
-
-  /**
-   * given an unoptimized logical operator tree and return a optimized result.
-   *
-   * @param operator unoptimized logical operator
-   * @return optimized logical operator
-   * @throws LogicalOptimizeException exception in logical optimizing
-   */
-  protected Operator logicalOptimize(Operator operator)
-      throws LogicalOperatorException {
-    switch (operator.getType()) {
-      case AUTHOR:
-      case METADATA:
-      case SET_STORAGE_GROUP:
-      case DELETE_STORAGE_GROUP:
-      case CREATE_TIMESERIES:
-      case DELETE_TIMESERIES:
-      case ALTER_TIMESERIES:
-      case LOADDATA:
-      case INSERT:
-      case INDEX:
-      case INDEXQUERY:
-      case GRANT_WATERMARK_EMBEDDING:
-      case REVOKE_WATERMARK_EMBEDDING:
-      case TTL:
-      case LOAD_CONFIGURATION:
-      case SHOW:
-      case LOAD_FILES:
-      case REMOVE_FILE:
-      case MOVE_FILE:
-      case FLUSH:
-      case MERGE:
-      case CLEAR_CACHE:
-        return operator;
-      case QUERY:
-      case UPDATE:
-      case DELETE:
-        SFWOperator root = (SFWOperator) operator;
-        return optimizeSFWOperator(root);
-      default:
-        throw new LogicalOperatorException(operator.getType().toString(), "");
+    public Planner() {
+        this.parseDriver = new ParseDriver();
     }
-  }
 
-  /**
-   * given an unoptimized select-from-where operator and return an optimized result.
-   *
-   * @param root unoptimized select-from-where operator
-   * @return optimized select-from-where operator
-   * @throws LogicalOptimizeException exception in SFW optimizing
-   */
-  private SFWOperator optimizeSFWOperator(SFWOperator root)
-      throws LogicalOperatorException {
-    ConcatPathOptimizer concatPathOptimizer = getConcatPathOptimizer();
-    root = (SFWOperator) concatPathOptimizer.transform(root);
-    FilterOperator filter = root.getFilterOperator();
-    if (filter == null) {
-      return root;
+    @TestOnly
+    public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr)
+            throws QueryProcessException {
+        IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+        return parseSQLToPhysicalPlan(sqlStr, config.getZoneID());
     }
-    Set<Path> pathSet = filter.getPathSet();
-    RemoveNotOptimizer removeNot = new RemoveNotOptimizer();
-    filter = removeNot.optimize(filter);
-    DnfFilterOptimizer dnf = new DnfFilterOptimizer();
-    filter = dnf.optimize(filter);
-    MergeSingleFilterOptimizer merge = new MergeSingleFilterOptimizer();
-    filter = merge.optimize(filter);
-    root.setFilterOperator(filter);
-    filter.setPathSet(pathSet);
-    return root;
-  }
 
-  protected ConcatPathOptimizer getConcatPathOptimizer() {
-    return new ConcatPathOptimizer();
-  }
+    public PhysicalPlan parseSQLToPhysicalPlan(String sqlStr, ZoneId zoneId)
+            throws QueryProcessException {
+        Operator operator = parseDriver.parse(sqlStr, zoneId);
+        operator = logicalOptimize(operator);
+        PhysicalGenerator physicalGenerator = new PhysicalGenerator();
+        return physicalGenerator.transformToPhysicalPlan(operator);
+    }
+
+
+    /**
+     * given an unoptimized logical operator tree and return a optimized result.
+     *
+     * @param operator unoptimized logical operator
+     * @return optimized logical operator
+     * @throws LogicalOptimizeException exception in logical optimizing
+     */
+    protected Operator logicalOptimize(Operator operator)
+            throws LogicalOperatorException {
+        switch (operator.getType()) {
+            case AUTHOR:
+            case METADATA:
+            case SET_STORAGE_GROUP:
+            case DELETE_STORAGE_GROUP:
+            case CREATE_TIMESERIES:
+            case DELETE_TIMESERIES:
+            case ALTER_TIMESERIES:
+            case LOADDATA:
+            case INDEX:
+            case INDEXQUERY:
+            case GRANT_WATERMARK_EMBEDDING:
+            case REVOKE_WATERMARK_EMBEDDING:
+            case TTL:
+            case LOAD_CONFIGURATION:
+            case SHOW:
+            case LOAD_FILES:
+            case REMOVE_FILE:
+            case MOVE_FILE:
+            case FLUSH:
+            case MERGE:
+            case CLEAR_CACHE:
+                return operator;
+            case INSERT:
+                // Check if this is a JSON Insert
+                InsertOperator insertOperator = (InsertOperator) operator;
+                if (insertOperator.getMeasurementList().length == 1 && "json".equals(insertOperator.getMeasurementList()[0].toLowerCase())) {
+                    return new InsertJsonOperator(insertOperator.getTime(), insertOperator.getSelectedPaths().get(0).getFullPath(), insertOperator.getValueList()[0]);
+                }
+                return operator;
+            case QUERY:
+            case UPDATE:
+            case DELETE:
+                SFWOperator root = (SFWOperator) operator;
+                return optimizeSFWOperator(root);
+            default:
+                throw new LogicalOperatorException(operator.getType().toString(), "");
+        }
+    }
+
+    /**
+     * given an unoptimized select-from-where operator and return an optimized result.
+     *
+     * @param root unoptimized select-from-where operator
+     * @return optimized select-from-where operator
+     * @throws LogicalOptimizeException exception in SFW optimizing
+     */
+    private SFWOperator optimizeSFWOperator(SFWOperator root)
+            throws LogicalOperatorException {
+        ConcatPathOptimizer concatPathOptimizer = getConcatPathOptimizer();
+        root = (SFWOperator) concatPathOptimizer.transform(root);
+        FilterOperator filter = root.getFilterOperator();
+        if (filter == null) {
+            return root;
+        }
+        Set<Path> pathSet = filter.getPathSet();
+        RemoveNotOptimizer removeNot = new RemoveNotOptimizer();
+        filter = removeNot.optimize(filter);
+        DnfFilterOptimizer dnf = new DnfFilterOptimizer();
+        filter = dnf.optimize(filter);
+        MergeSingleFilterOptimizer merge = new MergeSingleFilterOptimizer();
+        filter = merge.optimize(filter);
+        root.setFilterOperator(filter);
+        filter.setPathSet(pathSet);
+        return root;
+    }
+
+    protected ConcatPathOptimizer getConcatPathOptimizer() {
+        return new ConcatPathOptimizer();
+    }
 }

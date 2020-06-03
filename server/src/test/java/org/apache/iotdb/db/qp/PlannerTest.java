@@ -23,6 +23,7 @@ import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.MManager;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
+import org.apache.iotdb.db.qp.physical.crud.AlignAsJsonPlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
@@ -35,7 +36,7 @@ import org.junit.Test;
 
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertTrue;
 
 public class PlannerTest {
@@ -152,6 +153,26 @@ public class PlannerTest {
   public void parseErrorSQLToPhysicalPlan() throws QueryProcessException {
     String createTSStatement = "create timeseriess root.vehicle.d1.s1 with datatype=INT32,encoding=RLE";
     processor.parseSQLToPhysicalPlan(createTSStatement);
+  }
+
+  @Test
+  public void parseJson() throws QueryProcessException {
+    String createTSStatement = "INSERT INTO root.vehicle.d1.s1 (time, json) VALUES(NOW(), \"{\\\"a\\\": 1.0}\")";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(createTSStatement);
+
+
+    assertTrue(plan instanceof InsertPlan);
+    assertEquals("root.vehicle.d1.s1", ((InsertPlan) plan).getDeviceId());
+    assertEquals("a", ((InsertPlan) plan).getMeasurements()[0]);
+    assertEquals("1.0", ((InsertPlan) plan).getValues()[0]);
+  }
+
+  @Test
+  public void returnJson() throws QueryProcessException {
+    String createTSStatement = "SELECt * FROM root.demo.cars.mycar align by json";
+    PhysicalPlan plan = processor.parseSQLToPhysicalPlan(createTSStatement);
+
+    assertTrue(plan instanceof AlignAsJsonPlan);
   }
 
   @Test

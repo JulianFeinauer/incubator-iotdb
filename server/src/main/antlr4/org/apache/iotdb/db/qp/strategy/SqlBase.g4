@@ -223,6 +223,11 @@ soffsetClause
     : SOFFSET INT
     ;
 
+alignByJsonClause
+    : ALIGN BY JSON
+    | GROUP BY JSON
+    ;
+
 alignByDeviceClause
     : ALIGN BY DEVICE
     | GROUP BY DEVICE
@@ -234,6 +239,7 @@ disableAlign
 
 alignByDeviceClauseOrDisableAlign
     : alignByDeviceClause
+    | alignByJsonClause
     | disableAlign
     ;
 
@@ -482,6 +488,10 @@ TO
 
 BY
     : B Y
+    ;
+
+JSON
+    : J S O N
     ;
 
 DEVICE

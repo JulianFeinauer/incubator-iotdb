@@ -52,6 +52,7 @@ public class QueryOperator extends SFWOperator {
 
   private boolean isAlignByDevice = false;
   private boolean isAlignByTime = true;
+  private boolean isReturnJson = false;
 
   public QueryOperator(int tokenIntType) {
     super(tokenIntType);
@@ -192,5 +193,13 @@ public class QueryOperator extends SFWOperator {
 
   public void setGroupByTime(boolean groupByTime) {
     isGroupByTime = groupByTime;
+  }
+
+  public boolean isReturnJson() {
+    return isReturnJson;
+  }
+
+  public void setReturnJson(boolean returnJson) {
+    isReturnJson = returnJson;
   }
 }
