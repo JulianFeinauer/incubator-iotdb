@@ -18,7 +18,9 @@
  */
 package org.apache.iotdb.db.metadata.mnode;
 
-public class StorageGroupMNode extends InternalMNode {
+import org.apache.iotdb.db.metadata.mnode.impl.InternalMNodeImpl;
+
+public class StorageGroupMNode extends InternalMNodeImpl {
 
   private static final long serialVersionUID = 7999036474525817732L;
 

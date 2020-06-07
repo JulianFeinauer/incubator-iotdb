@@ -421,4 +421,25 @@ public class MTreeTest {
       fail(e.getMessage());
     }
   }
+
+  @Test
+  public void addSubDevice() throws MetadataException {
+    MTree root = new MTree();
+    root.setStorageGroup("root.laptop");
+    try {
+      root.createTimeseries("root.laptop.d1.s1", TSDataType.INT32, TSEncoding.RLE,
+              TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.EMPTY_MAP, null);
+    } catch (MetadataException e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+    boolean hasException = false;
+    try {
+      root.createTimeseries("root.laptop.d1.s1.b", TSDataType.INT32, TSEncoding.RLE,
+              TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.EMPTY_MAP, null);
+    } catch (MetadataException e) {
+      hasException = true;
+    }
+    Assert.assertTrue(hasException);
+  }
 }

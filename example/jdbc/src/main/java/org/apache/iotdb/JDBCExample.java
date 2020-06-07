@@ -41,9 +41,15 @@ public class JDBCExample {
         System.out.println(e.getMessage());
       }
 
+
+      System.out.println("Batches...");
+
       for (int i = 0; i <= 100; i++) {
         statement.addBatch("insert into root.sg1.d1(timestamp, s1, s2, s3) values("+ i + "," + 1 + "," + 1 + "," + 1 + ")");
       }
+
+
+
       statement.executeBatch();
       statement.clearBatch();
 

@@ -19,7 +19,6 @@
 package org.apache.iotdb.db.metadata;
 
 import org.apache.iotdb.db.conf.IoTDBConfig;
-import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.conf.adapter.ActiveTimeSeriesCounter;
 import org.apache.iotdb.db.conf.adapter.IoTDBConfigDynamicAdapter;
@@ -27,10 +26,8 @@ import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
 import org.apache.iotdb.db.exception.ConfigAdjusterException;
 import org.apache.iotdb.db.exception.metadata.*;
-import org.apache.iotdb.db.metadata.mnode.InternalMNode;
-import org.apache.iotdb.db.metadata.mnode.LeafMNode;
-import org.apache.iotdb.db.metadata.mnode.MNode;
-import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
+import org.apache.iotdb.db.metadata.mnode.*;
+import org.apache.iotdb.db.metadata.mnode.impl.LeafMNodeImpl;
 import org.apache.iotdb.db.monitor.MonitorConstants;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
@@ -1000,7 +997,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1063,7 +1060,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1106,7 +1103,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1159,7 +1156,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1212,7 +1209,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1273,7 +1270,7 @@ public class MManager {
     lock.writeLock().lock();
     try {
       MNode mNode = mtree.getNodeByPath(fullPath);
-      if (!(mNode instanceof LeafMNode)) {
+      if (!(mNode instanceof LeafMNodeImpl)) {
         throw new PathNotExistException(fullPath);
       }
       LeafMNode leafMNode = (LeafMNode) mNode;
@@ -1350,7 +1347,7 @@ public class MManager {
     nodeDeque.addLast(startingNode);
     while (!nodeDeque.isEmpty()) {
       MNode node = nodeDeque.removeFirst();
-      if (node instanceof LeafMNode) {
+      if (node instanceof LeafMNodeImpl) {
         MeasurementSchema nodeSchema = ((LeafMNode) node).getSchema();
         timeseriesSchemas.add(new MeasurementSchema(node.getFullPath(), nodeSchema.getType(),
             nodeSchema.getEncodingType(), nodeSchema.getCompressor()));

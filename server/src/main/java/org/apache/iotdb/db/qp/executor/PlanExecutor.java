@@ -75,10 +75,8 @@ import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.MManager;
-import org.apache.iotdb.db.metadata.mnode.InternalMNode;
-import org.apache.iotdb.db.metadata.mnode.LeafMNode;
-import org.apache.iotdb.db.metadata.mnode.MNode;
-import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
+import org.apache.iotdb.db.metadata.mnode.*;
+import org.apache.iotdb.db.metadata.mnode.impl.InternalMNodeImpl;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.logical.sys.AuthorOperator;
 import org.apache.iotdb.db.qp.logical.sys.AuthorOperator.AuthorType;
@@ -789,7 +787,7 @@ public class PlanExecutor implements IPlanExecutor {
                   schema.getEncodingType(),
                   schema.getCompressor(),
                   Collections.emptyMap());
-            } else if (node.getChild(chunkMetadata.getMeasurementUid()) instanceof InternalMNode) {
+            } else if (node.getChild(chunkMetadata.getMeasurementUid()) instanceof InternalMNodeImpl) {
               throw new QueryProcessException(
                   String.format("Current Path is not leaf node. %s", series));
             }
