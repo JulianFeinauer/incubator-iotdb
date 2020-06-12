@@ -218,7 +218,7 @@ public class IoTDBStatement implements Statement {
     try {
       RpcUtils.verifySuccess(execResp.getStatus());
     } catch (StatementExecutionException e) {
-      throw new IoTDBSQLException(e.getMessage(), execResp.getStatus());
+      throw new IoTDBSQLException(e.getMessage(), execResp.getStatus(), e);
     }
     if (execResp.isSetColumns()) {
       queryId = execResp.getQueryId();

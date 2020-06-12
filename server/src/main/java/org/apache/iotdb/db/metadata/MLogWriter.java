@@ -26,7 +26,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
-import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateElementaryTimeSeriesPlan;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +58,7 @@ public class MLogWriter {
     writer.close();
   }
 
-  public void createTimeseries(CreateTimeSeriesPlan plan, long offset) throws IOException {
+  public void createTimeseries(CreateElementaryTimeSeriesPlan plan, long offset) throws IOException {
     writer.write(String.format("%s,%s,%s,%s,%s", MetadataOperationType.CREATE_TIMESERIES,
         plan.getPath().getFullPath(), plan.getDataType().serialize(), plan.getEncoding().serialize(),
         plan.getCompressor().serialize()));

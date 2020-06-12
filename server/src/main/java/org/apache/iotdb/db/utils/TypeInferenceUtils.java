@@ -69,6 +69,9 @@ public class TypeInferenceUtils {
         // "NaN" is returned if the NaN Literal is given in Parser
       } else if ("NaN".equals(strValue)) {
         return nanStringInferType;
+      } else if (strValue.startsWith("{") && strValue.endsWith("}") || strValue.startsWith("\"{") && strValue.endsWith("}\"")) {
+        // Infer JSON / Structured
+        return TSDataType.STRUCTURED;
       } else {
         return TSDataType.TEXT;
       }

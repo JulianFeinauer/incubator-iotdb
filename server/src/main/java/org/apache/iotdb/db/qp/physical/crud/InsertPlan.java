@@ -21,10 +21,15 @@ package org.apache.iotdb.db.qp.physical.crud;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.sql.SQLDataException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
@@ -34,6 +39,7 @@ import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
 import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.utils.CommonUtils;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.utils.TypeInferenceUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.read.TimeValuePair;
@@ -191,7 +197,7 @@ public class InsertPlan extends PhysicalPlan {
           values[i] = CommonUtils.parseValue(types[i], values[i].toString());
         } catch (Exception e) {
           logger.warn("{}.{} data type is not consistent, input {}, registered {}", deviceId,
-              measurements[i], values[i], types[i]);
+              measurements[i], values[i], types[i], e);
           if (IoTDBDescriptor.getInstance().getConfig().isEnablePartialInsert()) {
             markMeasurementInsertionFailed(i);
             schemas[i] = null;
@@ -201,6 +207,43 @@ public class InsertPlan extends PhysicalPlan {
         }
       }
     }
+    this.flatten();
+  }
+
+  private void flatten() {
+    final List<String> newMeasurements = new ArrayList<>();
+    final List<TSDataType> newTypes = new ArrayList<>();
+    final List<Object> newValues = new ArrayList<>();
+    final ArrayList<MeasurementSchema> newSchemas = new ArrayList<>();
+    for (int i = 0; i < types.length; i++) {
+      System.out.println(measurements[i] + " - " + types[i] + " - " + values[i]);
+      if (types[i] == TSDataType.STRUCTURED) {
+        final JSONObject jsonObject = (JSONObject) values[i];
+        for (Map.Entry<String, Object> entry : jsonObject.entrySet()) {
+          newMeasurements.add(measurements[i] + "." + entry.getKey());
+          final TSDataType predictedDataType = TypeInferenceUtils.getPredictedDataType(entry.getValue(), true);
+          newTypes.add(predictedDataType);
+          try {
+            newValues.add(CommonUtils.parseValue(predictedDataType, entry.getValue().toString()));
+          } catch (QueryProcessException e) {
+            logger.warn("{}.{} data type is not consistent, input {}, registered {}", deviceId,
+                measurements[i], values[i], types[i], e);
+            newValues.add(null);
+          }
+          newSchemas.add(new MeasurementSchema(measurements[i] + "." + entry.getKey(), predictedDataType));
+        }
+      } else {
+        newMeasurements.add(measurements[i]);
+        newTypes.add(types[i]);
+        newValues.add(values[i]);
+        newSchemas.add(schemas[i]);
+      }
+    }
+    // Set new values
+    this.measurements = newMeasurements.toArray(new String[0]);
+    this.values = newValues.toArray();
+    this.types = newTypes.toArray(new TSDataType[0]);
+    this.schemas = newSchemas.toArray(new MeasurementSchema[0]);
   }
 
   /**

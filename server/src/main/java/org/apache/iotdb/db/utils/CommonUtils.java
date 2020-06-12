@@ -22,9 +22,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
+import org.apache.iotdb.db.qp.physical.sys.CreateStructuredTimeSeriesPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.fileSystem.FSFactoryProducer;
 import org.apache.iotdb.tsfile.utils.Binary;
@@ -90,22 +97,45 @@ public class CommonUtils {
         case DOUBLE:
           return Double.parseDouble(value);
         case TEXT:
-          if ((value.startsWith(SQLConstant.QUOTE) && value.endsWith(SQLConstant.QUOTE))
-              || (value.startsWith(SQLConstant.DQUOTE) && value.endsWith(SQLConstant.DQUOTE))) {
-            if (value.length() == 1) {
-              return new Binary(value);
-            } else {
-              return new Binary(value.substring(1, value.length() - 1));
+          return new Binary(unescapeString(value));
+        case STRUCTURED:
+          // Parse JSON to structured
+          final JSONObject json = JSON.parseObject(unescapeString(value));
+          for (Map.Entry<String, Object> entry : json.entrySet()) {
+            if (entry.getValue() instanceof JSONArray) {
+              throw new QueryProcessException("Structured Data cannot contain Arrays!");
             }
           }
-
-          return new Binary(value);
+          return json;
+          // TODO remove
+//          // Okay, we have no arrays
+//          for (Map.Entry<String, Object> entry : json.entrySet()) {
+//            final TSDataType type = TypeInferenceUtils.getPredictedDataType(entry.getValue().toString(), true);
+//            System.out.println("Field " + entry.getKey() + " has type " + type);
+//            if (type != TSDataType.STRUCTURED) {
+//              new CreateStructuredTimeSeriesPlan.PrimitiveStructure(type, null, null)
+//            } else {
+//
+//            }
+//          }
         default:
           throw new QueryProcessException("Unsupported data type:" + dataType);
       }
     } catch (NumberFormatException e) {
       throw new QueryProcessException(e.getMessage());
     }
+  }
+
+  private static String unescapeString(String value) {
+    if ((value.startsWith(SQLConstant.QUOTE) && value.endsWith(SQLConstant.QUOTE))
+        || (value.startsWith(SQLConstant.DQUOTE) && value.endsWith(SQLConstant.DQUOTE))) {
+      if (value.length() == 1) {
+        return StringEscapeUtils.unescapeJava(value);
+      } else {
+        return StringEscapeUtils.unescapeJava(value.substring(1, value.length() - 1));
+      }
+    }
+    return StringEscapeUtils.unescapeJava(value);
   }
 
   @TestOnly

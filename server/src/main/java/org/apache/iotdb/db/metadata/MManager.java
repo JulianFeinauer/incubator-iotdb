@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.security.InvalidParameterException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -52,17 +56,22 @@ import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupAlreadySetException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
+import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
 import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.metadata.mnode.MNode;
 import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
 import org.apache.iotdb.db.monitor.MonitorConstants;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
+import org.apache.iotdb.db.qp.physical.sys.CreateElementaryTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateStructuredTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
 import org.apache.iotdb.db.query.dataset.ShowTimeSeriesResult;
+import org.apache.iotdb.db.utils.CommonUtils;
 import org.apache.iotdb.db.utils.RandomDeleteCache;
 import org.apache.iotdb.db.utils.TestOnly;
+import org.apache.iotdb.db.utils.TypeInferenceUtils;
 import org.apache.iotdb.tsfile.common.cache.LRUCache;
 import org.apache.iotdb.tsfile.exception.cache.CacheException;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -268,7 +277,7 @@ public class MManager {
           tagMap = tagLogFile.readTag(config.getTagAttributeTotalSize(), offset);
         }
 
-        CreateTimeSeriesPlan plan = new CreateTimeSeriesPlan(new Path(args[1]),
+        CreateElementaryTimeSeriesPlan plan = new CreateElementaryTimeSeriesPlan(new Path(args[1]),
             TSDataType.deserialize(Short.parseShort(args[2])),
             TSEncoding.deserialize(Short.parseShort(args[3])),
             CompressionType.deserialize(Short.parseShort(args[4])), props, tagMap, null, alias);
@@ -303,10 +312,21 @@ public class MManager {
   }
 
   public void createTimeseries(CreateTimeSeriesPlan plan) throws MetadataException {
+    if (plan instanceof CreateElementaryTimeSeriesPlan) {
+      this.createTimeseries(((CreateElementaryTimeSeriesPlan) plan));
+    } else if (plan instanceof CreateStructuredTimeSeriesPlan) {
+      this.createTimeseries(((CreateStructuredTimeSeriesPlan) plan));
+    } else {
+      throw new InvalidParameterException("Not known argument");
+    }
+  }
+
+  public void createTimeseries(CreateElementaryTimeSeriesPlan plan) throws MetadataException {
     createTimeseries(plan, -1);
   }
 
-  public void createTimeseries(CreateTimeSeriesPlan plan, long offset) throws MetadataException {
+  public void createTimeseries(CreateStructuredTimeSeriesPlan plan) throws MetadataException {
+    // ...
     lock.writeLock().lock();
     String path = plan.getPath().getFullPath();
     try {
@@ -327,6 +347,76 @@ public class MManager {
 
       // check memory
       IoTDBConfigDynamicAdapter.getInstance().addOrDeleteTimeSeries(1);
+
+      // What do we do with JSON at this level?
+
+
+      // create time series in MTree
+      MeasurementMNode leafMNode = mtree
+          .createTimeseries(path, plan.getStructure(),
+              plan.getProps(), plan.getAlias());
+
+      // update tag index
+      if (plan.getTags() != null) {
+        // tag key, tag value
+        for (Entry<String, String> entry : plan.getTags().entrySet()) {
+          tagIndex.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
+              .computeIfAbsent(entry.getValue(), v -> new HashSet<>()).add(leafMNode);
+        }
+      }
+
+      // update statistics
+      if (config.isEnableParameterAdapter()) {
+        int size = seriesNumberInStorageGroups.get(storageGroupName);
+        seriesNumberInStorageGroups.put(storageGroupName, size + 1);
+        if (size + 1 > maxSeriesNumberAmongStorageGroup) {
+          maxSeriesNumberAmongStorageGroup = size + 1;
+        }
+      }
+
+      // write log
+      // TODO what to do with the log?
+//      if (!isRecovering) {
+//        // either tags or attributes is not empty
+//        if ((plan.getTags() != null && !plan.getTags().isEmpty())
+//            || (plan.getAttributes() != null && !plan.getAttributes().isEmpty())) {
+//          offset = tagLogFile.write(plan.getTags(), plan.getAttributes());
+//        }
+//        logWriter.createTimeseries(plan, offset);
+//      }
+//      leafMNode.setOffset(offset);
+
+    } catch (ConfigAdjusterException e) {
+      throw new MetadataException(e.getMessage());
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  public void createTimeseries(CreateElementaryTimeSeriesPlan plan, long offset) throws MetadataException {
+    lock.writeLock().lock();
+    String path = plan.getPath().getFullPath();
+    try {
+      /*
+       * get the storage group with auto create schema
+       */
+      String storageGroupName;
+      try {
+        storageGroupName = mtree.getStorageGroupName(path);
+      } catch (StorageGroupNotSetException e) {
+        if (!config.isAutoCreateSchemaEnabled()) {
+          throw e;
+        }
+        storageGroupName =
+            MetaUtils.getStorageGroupNameByLevel(path, config.getDefaultStorageGroupLevel());
+        setStorageGroup(storageGroupName);
+      }
+
+      // check memory
+      IoTDBConfigDynamicAdapter.getInstance().addOrDeleteTimeSeries(1);
+
+      // What do we do with JSON at this level?
+
 
       // create time series in MTree
       MeasurementMNode leafMNode = mtree
@@ -369,6 +459,28 @@ public class MManager {
     }
   }
 
+  public void createTimeseries(String path, TSDataType dataType, TSEncoding encoding,
+      CompressionType compressor, Map<String, String> props, Object value) throws MetadataException {
+    if (dataType != TSDataType.STRUCTURED) {
+      createTimeseries(
+          new CreateElementaryTimeSeriesPlan(new Path(path), dataType, encoding, compressor, props, null, null,
+              null));
+    } else {
+      // Infer Schema from Structure
+      try {
+        final JSONObject jsonObject = ((JSONObject) CommonUtils.parseValue(TSDataType.STRUCTURED, value.toString()));
+        final HashMap<String, CreateStructuredTimeSeriesPlan.Structure> map = new HashMap<>();
+        for (Entry<String, Object> entry : jsonObject.entrySet()) {
+          final TSDataType predictedDataType = TypeInferenceUtils.getPredictedDataType(entry.getValue().toString(), true);
+          map.put(entry.getKey(), new CreateStructuredTimeSeriesPlan.PrimitiveStructure(predictedDataType, null, null));
+        }
+        createTimeseries(new CreateStructuredTimeSeriesPlan(new Path(path), new CreateStructuredTimeSeriesPlan.MapStructure(map), props, null, null, null));
+      } catch (QueryProcessException e) {
+        throw new MetadataException(e.getMessage(), e);
+      }
+    }
+  }
+
   /**
    * Add one timeseries to metadata tree, if the timeseries already exists, throw exception
    *
@@ -380,10 +492,8 @@ public class MManager {
    * measurement should be registered to the StorageEngine too)
    */
   public void createTimeseries(String path, TSDataType dataType, TSEncoding encoding,
-      CompressionType compressor, Map<String, String> props) throws MetadataException {
-    createTimeseries(
-        new CreateTimeSeriesPlan(new Path(path), dataType, encoding, compressor, props, null, null,
-            null));
+                               CompressionType compressor, Map<String, String> props) throws MetadataException {
+    this.createTimeseries(path, dataType, encoding, compressor, props, null);
   }
 
   /**

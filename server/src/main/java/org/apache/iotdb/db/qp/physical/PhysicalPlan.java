@@ -29,7 +29,7 @@ import org.apache.iotdb.db.qp.physical.crud.InsertTabletPlan;
 import org.apache.iotdb.db.qp.physical.crud.DeletePlan;
 import org.apache.iotdb.db.qp.physical.crud.InsertPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
-import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateElementaryTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
@@ -182,7 +182,7 @@ public abstract class PhysicalPlan {
           plan.deserialize(buffer);
           break;
         case CREATE_TIMESERIES:
-          plan = new CreateTimeSeriesPlan();
+          plan = new CreateElementaryTimeSeriesPlan();
           plan.deserialize(buffer);
           break;
         case DELETE_TIMESERIES:

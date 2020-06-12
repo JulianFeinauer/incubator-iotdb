@@ -56,6 +56,7 @@ import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.db.qp.physical.crud.*;
 import org.apache.iotdb.db.qp.physical.crud.AlignByDevicePlan.MeasurementType;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateElementaryTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
@@ -1318,7 +1319,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
       return status;
     }
 
-    CreateTimeSeriesPlan plan = new CreateTimeSeriesPlan(new Path(req.path),
+    CreateTimeSeriesPlan plan = new CreateElementaryTimeSeriesPlan(new Path(req.path),
         TSDataType.values()[req.dataType], TSEncoding.values()[req.encoding],
         CompressionType.values()[req.compressor], req.props, req.tags, req.attributes,
         req.measurementAlias);
@@ -1337,7 +1338,7 @@ public class TSServiceImpl implements TSIService.Iface, ServerContext {
     }
     List<TSStatus> statusList = new ArrayList<>(req.paths.size());
     for (int i = 0; i < req.paths.size(); i++) {
-      CreateTimeSeriesPlan plan = new CreateTimeSeriesPlan(new Path(req.getPaths().get(i)),
+      CreateTimeSeriesPlan plan = new CreateElementaryTimeSeriesPlan(new Path(req.getPaths().get(i)),
           TSDataType.values()[req.dataTypes.get(i)], TSEncoding.values()[req.encodings.get(i)],
           CompressionType.values()[req.compressors.get(i)],
           req.propsList == null ? null : req.propsList.get(i),

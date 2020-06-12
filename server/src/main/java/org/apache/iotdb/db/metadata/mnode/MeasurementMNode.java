@@ -18,6 +18,7 @@
  */
 package org.apache.iotdb.db.metadata.mnode;
 
+import org.apache.iotdb.db.qp.physical.sys.CreateStructuredTimeSeriesPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -36,7 +37,8 @@ public class MeasurementMNode extends InternalMNode {
   /**
    * measurement's Schema for one timeseries represented by current leaf node
    */
-  private MeasurementSchema schema;
+  private MeasurementSchema schema = null;
+  private CreateStructuredTimeSeriesPlan.Structure structure = null;
   private String alias;
   // tag/attribute's start offset in tag file
   private long offset = -1;
@@ -53,8 +55,19 @@ public class MeasurementMNode extends InternalMNode {
     this.alias = alias;
   }
 
+  public MeasurementMNode(MNode parent, String measurementName, String alias, CreateStructuredTimeSeriesPlan.Structure structure, Map<String, String> props) {
+    super(parent, measurementName);
+    this.structure = structure;
+    this.schema = null;
+    this.alias = alias;
+  }
+
   public MeasurementSchema getSchema() {
-    return schema;
+    if (schema != null) {
+      return schema;
+    } else {
+      return structure;
+    }
   }
 
   public TimeValuePair getCachedLast() {
@@ -82,6 +95,14 @@ public class MeasurementMNode extends InternalMNode {
   @Override
   public String getFullPath() {
     return concatFullPath();
+  }
+
+  public CreateStructuredTimeSeriesPlan.Structure getStructure() {
+    return structure;
+  }
+
+  public void setStructure(CreateStructuredTimeSeriesPlan.Structure structure) {
+    this.structure = structure;
   }
 
   public void resetCache() {

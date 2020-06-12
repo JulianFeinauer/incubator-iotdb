@@ -34,6 +34,10 @@ public class IoTDBSQLException extends SQLException {
     super(reason, status.message, status.code);
   }
 
+  public IoTDBSQLException(String reason, TSStatus status, Throwable cause) {
+    super(reason, status.message, status.code, cause);
+  }
+
   public IoTDBSQLException(Throwable cause) {
     super(cause);
   }

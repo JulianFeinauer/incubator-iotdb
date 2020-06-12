@@ -20,6 +20,7 @@ package org.apache.iotdb.db.metadata;
 
 import org.apache.iotdb.db.exception.metadata.AliasAlreadyExistException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
+import org.apache.iotdb.db.qp.physical.sys.CreateStructuredTimeSeriesPlan;
 import org.apache.iotdb.db.utils.EnvironmentUtils;
 import org.apache.iotdb.tsfile.common.conf.TSFileDescriptor;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -439,6 +440,21 @@ public class MTreeTest {
         TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
     root.createTimeseries("root.laptop.d1.s1.b", TSDataType.INT32, TSEncoding.RLE,
         TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap(), null);
+
+    assertEquals(2, root.getDevices("root").size());
+    assertEquals(2, root.getAllTimeseriesCount("root"));
+    assertEquals(2, root.getAllTimeseriesName("root").size());
+    assertEquals(2, root.getAllTimeseriesPath("root").size());
+  }
+
+  @Test
+  public void addStructuredNode() throws MetadataException {
+    MTree root = new MTree();
+    root.setStorageGroup("root.laptop");
+
+    root.createTimeseries("root.laptop.d1.structured",
+        new CreateStructuredTimeSeriesPlan.MapStructure(Collections.singletonMap("a", new CreateStructuredTimeSeriesPlan.PrimitiveStructure(TSDataType.DOUBLE, TSEncoding.PLAIN, CompressionType.UNCOMPRESSED))),
+        Collections.emptyMap(), null);
 
     assertEquals(2, root.getDevices("root").size());
     assertEquals(2, root.getAllTimeseriesCount("root"));

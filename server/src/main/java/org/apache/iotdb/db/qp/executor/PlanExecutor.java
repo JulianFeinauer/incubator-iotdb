@@ -90,7 +90,7 @@ import org.apache.iotdb.db.qp.physical.sys.AlterTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.AuthorPlan;
 import org.apache.iotdb.db.qp.physical.sys.ClearCachePlan;
 import org.apache.iotdb.db.qp.physical.sys.CountPlan;
-import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
+import org.apache.iotdb.db.qp.physical.sys.CreateElementaryTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.DataAuthPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteStorageGroupPlan;
 import org.apache.iotdb.db.qp.physical.sys.DeleteTimeSeriesPlan;
@@ -211,7 +211,7 @@ public class PlanExecutor implements IPlanExecutor {
       case DELETE_TIMESERIES:
         return deleteTimeSeries((DeleteTimeSeriesPlan) plan);
       case CREATE_TIMESERIES:
-        return createTimeSeries((CreateTimeSeriesPlan) plan);
+        return createTimeSeries((CreateElementaryTimeSeriesPlan) plan);
       case ALTER_TIMESERIES:
         return alterTimeSeries((AlterTimeSeriesPlan) plan);
       case SET_STORAGE_GROUP:
@@ -957,7 +957,7 @@ public class PlanExecutor implements IPlanExecutor {
         // auto-create
         TSDataType dataType = TypeInferenceUtils.getPredictedDataType(value, isInferType);
         Path path = new Path(deviceId, measurement);
-        internalCreateTimeseries(path.toString(), dataType);
+        internalCreateTimeseries(path.toString(), dataType, value);
 
         MeasurementMNode measurementNode = (MeasurementMNode) mManager.getChild(deviceNode, measurement);
         measurementSchema = measurementNode.getSchema();
@@ -1022,14 +1022,14 @@ public class PlanExecutor implements IPlanExecutor {
   /**
    * create timeseries with ignore PathAlreadyExistException
    */
-  private void internalCreateTimeseries(String path, TSDataType dataType) throws MetadataException {
+  private void internalCreateTimeseries(String path, TSDataType dataType, Object value) throws MetadataException {
     try {
       mManager.createTimeseries(
           path,
           dataType,
           getDefaultEncoding(dataType),
           TSFileDescriptor.getInstance().getConfig().getCompressor(),
-          Collections.emptyMap());
+          Collections.emptyMap(), value);
     } catch (PathAlreadyExistException e) {
       if (logger.isDebugEnabled()) {
         logger.debug("Ignore PathAlreadyExistException when Concurrent inserting"
@@ -1056,6 +1056,8 @@ public class PlanExecutor implements IPlanExecutor {
         return conf.getDefaultDoubleEncoding();
       case TEXT:
         return conf.getDefaultTextEncoding();
+      case STRUCTURED:
+        return TSEncoding.PLAIN;
       default:
         throw new UnSupportedDataTypeException(
             String.format("Data type %s is not supported.", dataType.toString()));
@@ -1084,7 +1086,8 @@ public class PlanExecutor implements IPlanExecutor {
           }
           Path path = new Path(deviceId, measurement);
           TSDataType dataType = dataTypes[i];
-          internalCreateTimeseries(path.getFullPath(), dataType);
+          // TODO is getColumns right here?
+          internalCreateTimeseries(path.getFullPath(), dataType, insertTabletPlan.getColumns()[i]);
 
         }
         MeasurementMNode measurementNode = (MeasurementMNode) mManager.getChild(node, measurement);
@@ -1183,7 +1186,7 @@ public class PlanExecutor implements IPlanExecutor {
     return true;
   }
 
-  private boolean createTimeSeries(CreateTimeSeriesPlan createTimeSeriesPlan)
+  private boolean createTimeSeries(CreateElementaryTimeSeriesPlan createTimeSeriesPlan)
       throws QueryProcessException {
     try {
       mManager.createTimeseries(createTimeSeriesPlan);

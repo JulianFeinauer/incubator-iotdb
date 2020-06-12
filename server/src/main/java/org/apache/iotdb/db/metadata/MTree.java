@@ -31,9 +31,10 @@ import org.apache.iotdb.db.exception.metadata.PathNotExistException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupAlreadySetException;
 import org.apache.iotdb.db.exception.metadata.StorageGroupNotSetException;
 import org.apache.iotdb.db.metadata.mnode.InternalMNode;
-import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.metadata.mnode.MNode;
+import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.metadata.mnode.StorageGroupMNode;
+import org.apache.iotdb.db.qp.physical.sys.CreateStructuredTimeSeriesPlan;
 import org.apache.iotdb.db.qp.physical.sys.ShowTimeSeriesPlan;
 import org.apache.iotdb.tsfile.common.constant.TsFileConstant;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
@@ -129,6 +130,57 @@ public class MTree implements Serializable {
     // link alias to LeafMNode
     if (alias != null) {
       cur.addAlias(alias, leaf);
+    }
+    return leaf;
+  }
+
+  MeasurementMNode createTimeseries(
+      String path,
+      CreateStructuredTimeSeriesPlan.Structure structure,
+      Map<String, String> props,
+      String alias)
+      throws MetadataException {
+    String[] nodeNames = MetaUtils.getNodeNames(path);
+    if (nodeNames.length <= 2 || !nodeNames[0].equals(root.getName())) {
+      throw new IllegalPathException(path);
+    }
+    MNode cur = root;
+    boolean hasSetStorageGroup = false;
+    // e.g, path = root.sg.d1.s1,  create internal nodes and set cur to d1 node
+    for (int i = 1; i < nodeNames.length - 1; i++) {
+      String nodeName = nodeNames[i];
+      if (cur instanceof StorageGroupMNode) {
+        hasSetStorageGroup = true;
+      }
+      if (!cur.hasChild(nodeName)) {
+        if (!hasSetStorageGroup) {
+          throw new StorageGroupNotSetException("Storage group should be created first");
+        }
+        cur.addChild(nodeName, new InternalMNode(cur, nodeName));
+      }
+      cur = cur.getChild(nodeName);
+    }
+    String leafName = nodeNames[nodeNames.length - 1];
+    if (cur.hasChild(leafName)) {
+      throw new PathAlreadyExistException(path);
+    }
+    if (alias != null && cur.hasChild(alias)) {
+      throw new AliasAlreadyExistException(path, alias);
+    }
+    MeasurementMNode leaf = new MeasurementMNode(cur, leafName, alias, structure, props);
+    cur.addChild(leafName, leaf);
+    // link alias to LeafMNode
+    if (alias != null) {
+      cur.addAlias(alias, leaf);
+    }
+    // Now also create the schema entries
+    for (Entry<String, CreateStructuredTimeSeriesPlan.Structure> entry : structure.getElements().entrySet()) {
+      final CreateStructuredTimeSeriesPlan.Structure value = entry.getValue();
+      if (value instanceof CreateStructuredTimeSeriesPlan.PrimitiveStructure) {
+        this.createTimeseries(path + "." + entry.getKey(), ((CreateStructuredTimeSeriesPlan.PrimitiveStructure) value).getDataType(), ((CreateStructuredTimeSeriesPlan.PrimitiveStructure) value).getEncoding(), ((CreateStructuredTimeSeriesPlan.PrimitiveStructure) value).getCompressor(), props, null);
+      } else {
+        this.createTimeseries(path + "." + entry.getKey(), ((CreateStructuredTimeSeriesPlan.MapStructure) value), props, null);
+      }
     }
     return leaf;
   }
@@ -675,15 +727,25 @@ public class MTree implements Serializable {
           nodeName = node.getName();
         }
         String nodePath = parent + nodeName;
-        String[] tsRow = new String[7];
-        tsRow[0] = nodePath;
-        tsRow[1] = ((MeasurementMNode) node).getAlias();
-        MeasurementSchema measurementSchema = ((MeasurementMNode) node).getSchema();
-        tsRow[2] = getStorageGroupName(nodePath);
-        tsRow[3] = measurementSchema.getType().toString();
-        tsRow[4] = measurementSchema.getEncodingType().toString();
-        tsRow[5] = measurementSchema.getCompressor().toString();
-        tsRow[6] = String.valueOf(((MeasurementMNode) node).getOffset());
+        String[] tsRow;
+        if (((MeasurementMNode) node).getSchema() != null) {
+          tsRow = new String[7];
+          tsRow[0] = nodePath;
+          tsRow[1] = ((MeasurementMNode) node).getAlias();
+          MeasurementSchema measurementSchema = ((MeasurementMNode) node).getSchema();
+          tsRow[2] = getStorageGroupName(nodePath);
+          tsRow[3] = measurementSchema.getType().toString();
+          tsRow[4] = measurementSchema.getEncodingType().toString();
+          tsRow[5] = measurementSchema.getCompressor().toString();
+          tsRow[6] = String.valueOf(((MeasurementMNode) node).getOffset());
+        } else {
+          final CreateStructuredTimeSeriesPlan.Structure structure = ((MeasurementMNode) node).getStructure();
+          tsRow = new String[4];
+          tsRow[0] = nodePath;
+          tsRow[1] = ((MeasurementMNode) node).getAlias();
+          tsRow[2] = getStorageGroupName(nodePath);
+          tsRow[3] = structure.toString();
+        }
         timeseriesSchemaList.add(tsRow);
 
         if (hasLimit) {
