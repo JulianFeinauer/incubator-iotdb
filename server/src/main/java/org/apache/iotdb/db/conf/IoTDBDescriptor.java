@@ -477,7 +477,7 @@ public class IoTDBDescriptor {
 
       conf.setAuthorizerProvider(properties.getProperty("authorizer_provider_class",
           "org.apache.iotdb.db.auth.authorizer.LocalFileAuthorizer"));
-      //if using org.apache.iotdb.db.auth.authorizer.OpenIdAuthorizer, openID_url is needed.
+      //if using org.apache.iotdb.db.auth.authorizer.OpenIdTokenAuthorizer, openID_url is needed.
       conf.setOpenIdProviderUrl(properties.getProperty("openID_url", ""));
 
       // At the same time, set TSFileConfig

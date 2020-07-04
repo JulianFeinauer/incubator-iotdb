@@ -1,271 +1,162 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements.  See the NOTICE file distributed with this work for additional information regarding copyright ownership.  The ASF licenses this file to you under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.  You may obtain a copy of the License at    http://www.apache.org/licenses/LICENSE-2.0  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the License for the specific language governing permissions and limitations under the License.
  */
+
 package org.apache.iotdb.db.auth.authorizer;
 
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.oauth2.sdk.AccessTokenResponse;
 import com.nimbusds.oauth2.sdk.ParseException;
-import com.nimbusds.oauth2.sdk.util.JSONObjectUtils;
+import com.nimbusds.oauth2.sdk.RefreshTokenGrant;
+import com.nimbusds.oauth2.sdk.ResourceOwnerPasswordCredentialsGrant;
+import com.nimbusds.oauth2.sdk.TokenErrorResponse;
+import com.nimbusds.oauth2.sdk.TokenRequest;
+import com.nimbusds.oauth2.sdk.TokenResponse;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthentication;
+import com.nimbusds.oauth2.sdk.auth.ClientSecretBasic;
+import com.nimbusds.oauth2.sdk.auth.Secret;
+import com.nimbusds.oauth2.sdk.id.ClientID;
+import com.nimbusds.oauth2.sdk.token.AccessToken;
+import com.nimbusds.oauth2.sdk.token.RefreshToken;
 import com.nimbusds.openid.connect.sdk.op.OIDCProviderMetadata;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import org.apache.iotdb.db.auth.AuthException;
-import org.apache.iotdb.db.auth.entity.Role;
-import org.apache.iotdb.db.auth.entity.User;
-import org.apache.iotdb.db.auth.role.LocalFileRoleManager;
-import org.apache.iotdb.db.auth.user.LocalFileUserManager;
-import org.apache.iotdb.db.conf.IoTDBConfig;
-import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.security.interfaces.RSAPublicKey;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Uses an OpenID Connect provider for Authorization / Authentication.
+ * Does full OAUtH 2 / OpenID Connect login
  */
-public class OpenIdAuthorizer extends BasicAuthorizer {
+public class OpenIdAuthorizer extends OpenIdTokenAuthorizer {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenIdAuthorizer.class);
-    public static final String IOTDB_ADMIN_ROLE_NAME = "iotdb_admin";
-    public static final String OPENID_USER_PREFIX = "openid-";
 
-    private static IoTDBConfig config = IoTDBDescriptor.getInstance().getConfig();
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
-    private RSAPublicKey providerKey;
+    private final Map<String, AccessToken> accessTokenMap = new ConcurrentHashMap<>();
 
-    /** Stores all claims to the respective user */
-    private Map<String, Claims> loggedClaims = new HashMap<>();
+    private URI tokenEndpointURI;
 
     public OpenIdAuthorizer() throws AuthException, ParseException, IOException, URISyntaxException {
-        this(config.getOpenIdProviderUrl());
+        super();
     }
 
     OpenIdAuthorizer(JSONObject jwk) throws AuthException {
-        super(new LocalFileUserManager(config.getSystemDir() + File.separator + "users"),
-                new LocalFileRoleManager(config.getSystemDir() + File.separator + "roles"));
-        try {
-            providerKey = RSAKey.parse(jwk).toRSAPublicKey();
-        } catch (java.text.ParseException | JOSEException e) {
-            throw new AuthException("Unable to get OIDC Provider Key from JWK " +  jwk.toString(), e);
-        }
-        logger.info("Initialized with providerKey: {}", providerKey);
+        super(jwk);
     }
 
     OpenIdAuthorizer(String providerUrl) throws AuthException, URISyntaxException, ParseException, IOException {
-        this(getJWKfromProvider(providerUrl));
+        super(providerUrl);
+        final OIDCProviderMetadata metadata = fetchMetadata(providerUrl);
+        tokenEndpointURI = metadata.getTokenEndpointURI();
     }
 
-    private static JSONObject getJWKfromProvider(String providerUrl) throws URISyntaxException, IOException, ParseException, AuthException {
-        if (providerUrl == null) {
-            throw new IllegalArgumentException("OpenID Connect Provider URI must be given!");
-        }
-
-        // Fetch Metadata
-        OIDCProviderMetadata providerMetadata = fetchMetadata(providerUrl);
-
-        logger.debug("Using Provider Metadata: {}", providerMetadata);
-
+    @Override
+    public boolean login(String username, String password) throws AuthException {
         try {
-            URL url = new URI(providerMetadata.getJWKSetURI().toString().replace("http", "https")).toURL();
-            logger.debug("Using url {}", url);
-            return getProviderRSAJWK(url.openStream());
-        } catch (IOException e) {
-            throw new AuthException("Unable to start the Auth", e);
-        }
-    }
+            // Do the auth workflow...
+            // Construct the code grant from the code obtained from the authz endpoint
+            // and the original callback URI used at the authz endpoint
+            final ResourceOwnerPasswordCredentialsGrant grant = new ResourceOwnerPasswordCredentialsGrant(username, new Secret(password));
 
-    private static JSONObject getProviderRSAJWK(InputStream is) throws ParseException {
-        // Read all data from stream
-        StringBuilder sb = new StringBuilder();
-        try (Scanner scanner = new Scanner(is);) {
-            while (scanner.hasNext()) {
-                sb.append(scanner.next());
+            // The credentials to authenticate the client at the token endpoint
+            ClientID clientID = new ClientID("iotdb-2");
+            Secret clientSecret = new Secret("fdaae6f1-078e-4e4a-b192-576f4bf1694d");
+
+            ClientAuthentication clientAuth = new ClientSecretBasic(clientID, clientSecret);
+
+            // Make the token request
+            TokenRequest request = new TokenRequest(tokenEndpointURI, clientAuth, grant);
+
+            TokenResponse response = TokenResponse.parse(request.toHTTPRequest().send());
+
+            if (!response.indicatesSuccess()) {
+                // We got an error response...
+                TokenErrorResponse errorResponse = response.toErrorResponse();
+                throw new AuthException("Unable to get Token: " + errorResponse.getErrorObject().getDescription());
             }
+
+            AccessTokenResponse successResponse = response.toSuccessResponse();
+
+            // Get the access token, the server may also return a refresh token
+            AccessToken accessToken = successResponse.getTokens().getAccessToken();
+            this.accessTokenMap.put(username, accessToken);
+
+            super.login(accessToken.getValue(), "");
+
+            RefreshToken refreshToken = successResponse.getTokens().getRefreshToken();
+            final long expiresIn = accessToken.getLifetime();
+
+
+            logger.debug("User {} logged in, Token will expire in {}s", username, expiresIn);
+
+            executorService.schedule(new RefreshTokenCommand(tokenEndpointURI, clientAuth, refreshToken, username), expiresIn - 10, TimeUnit.SECONDS);
+
+            return true;
+        } catch (IOException | ParseException e) {
+            throw new AuthException("Unable to Login", e);
+        }
+    }
+
+    private class RefreshTokenCommand implements Runnable {
+        private final URI fixedEndpoint;
+        private final ClientAuthentication clientAuth;
+        private final RefreshToken refreshToken;
+        private final String username;
+
+        public RefreshTokenCommand(URI fixedEndpoint, ClientAuthentication clientAuth, RefreshToken refreshToken, String username) {
+            this.fixedEndpoint = fixedEndpoint;
+            this.clientAuth = clientAuth;
+            this.refreshToken = refreshToken;
+            this.username = username;
         }
 
-        // Parse the data as json
-        String jsonString = sb.toString();
-        JSONObject json = JSONObjectUtils.parse(jsonString);
+        @Override
+        public void run() {
+            // Fetch a new Token
 
-        // Find the RSA signing key
-        JSONArray keyList = (JSONArray) json.get("keys");
-        for (Object key : keyList) {
-            JSONObject k = (JSONObject) key;
-            if (k.get("use").equals("sig") && k.get("kty").equals("RSA")) {
-                return k;
-            }
-        }
-        return null;
-    }
+            OpenIdAuthorizer.logger.debug("Refreshing Auth Token for user {}", username);
 
-    static OIDCProviderMetadata fetchMetadata(String providerUrl) throws URISyntaxException, IOException, ParseException {
-        URI issuerURI = new URI(providerUrl);
-        URL providerConfigurationURL = issuerURI.resolve(".well-known/openid-configuration").toURL();
-        InputStream stream = providerConfigurationURL.openStream();
-        // Read all data from URL
-        String providerInfo = null;
-        try (java.util.Scanner s = new java.util.Scanner(stream)) {
-            providerInfo = s.useDelimiter("\\A").hasNext() ? s.next() : "";
-        }
-        return OIDCProviderMetadata.parse(providerInfo);
-    }
+            final TokenRequest request = new TokenRequest(fixedEndpoint, clientAuth, new RefreshTokenGrant(refreshToken));
 
-    @Override
-    public boolean login(String token, String password) throws AuthException {
-        if (password != null && !password.isEmpty()) {
-            logger.error("JWT Login failed as a non-empty Password was given username (token): {}, password: {}", token, password);
-            return false;
-        }
-        if (token == null || token.isEmpty()) {
-            logger.error("JWT Login failed as a Username (token) was empty!");
-            return false;
-        }
-        //This line will throw an exception if it is not a signed JWS (as expected)
-        Claims claims;
-        try {
-            claims = validateToken(token);
-        } catch (JwtException e) {
-            logger.error("Unable to login the user wit jwt {}", password, e);
-            return false;
-        }
-        logger.debug("JWT was validated successfully!");
-        logger.debug("ID: {}", claims.getId());
-        logger.debug("Subject: {}", claims.getSubject());
-        logger.debug("Issuer: {}", claims.getIssuer());
-        logger.debug("Expiration: {}", claims.getExpiration());
-        // Create User if not exists
-        String iotdbUsername = getUsername(claims);
-        if (!super.listAllUsers().contains(iotdbUsername)) {
-            logger.info("User {} logs in for first time, storing it locally!", iotdbUsername);
-            // We give the user a random password so that no one could hijack them via local login
-            super.createUser(iotdbUsername, UUID.randomUUID().toString());
-        }
-        // Always store claims and user
-        this.loggedClaims.put(getUsername(claims), claims);
-        return true;
-    }
-
-    private Claims validateToken(String token) {
-        return Jwts
-                .parser()
-                // Basically ignore the Expiration Date, if there is any???
-                .setAllowedClockSkewSeconds(Long.MAX_VALUE / 1000)
-                // .setSigningKey(DatatypeConverter.parseBase64Binary(secret))
-                .setSigningKey(providerKey)
-                .parseClaimsJws(token)
-                .getBody();
-    }
-
-    private String getUsername(Claims claims) {
-        return OPENID_USER_PREFIX + claims.getSubject();
-    }
-
-    private String getUsername(String token) {
-        return getUsername(validateToken(token));
-    }
-
-    @Override
-    public void createUser(String username, String password) throws AuthException {
-        throwUnsupportedOperationException();
-    }
-
-    private void throwUnsupportedOperationException() {
-        throw new UnsupportedOperationException("This operation is not supported for JWT Auth Provider!");
-    }
-
-    @Override
-    public void deleteUser(String username) throws AuthException {
-        throwUnsupportedOperationException();
-    }
-
-    /**
-     * So not with the token!
-     * @param token Usually the JWT but could also be just the name of the user ({@link #getUsername(String)}.
-     * @return true if the user is an admin
-     */
-    @Override
-    boolean isAdmin(String token) {
-        Claims claims;
-        if (this.loggedClaims.containsKey(token)) {
-            // This is a username!
-            claims = this.loggedClaims.get(token);
-        } else {
-            // Its a token
+            final TokenResponse response;
             try {
-                claims = validateToken(token);
-            } catch (JwtException e) {
-                logger.warn("Unable to validate token {}!", token, e);
-                return false;
+                response = TokenResponse.parse(request.toHTTPRequest().send());
+            } catch (ParseException | IOException e) {
+                // Simply do nothing???
+                logger.error("Unable to Refresh Token for user {}", username, e);
+                return;
             }
-        }
-        // Get available roles (from keycloack)
-        List<String> availableRoles = ((Map<String, List<String>>) claims.get("realm_access")).get("roles");
-        if (!availableRoles.contains(IOTDB_ADMIN_ROLE_NAME)) {
-            logger.warn("Given Token has no admin rights, is there a ROLE with name {} in 'realm_access' role set?", IOTDB_ADMIN_ROLE_NAME);
-            return false;
-        }
-        return true;
-    }
 
-    @Override
-    public boolean checkUserPrivileges(String username, String path, int privilegeId)
-            throws AuthException {
-        if (isAdmin(username)) {
-            return true;
-        }
-
-        User user = userManager.getUser(getUsername(username));
-        if (user == null) {
-            throw new AuthException(String.format("No such user : %s", getUsername(username)));
-        }
-        // get privileges of the user
-        if (user.checkPrivilege(path, privilegeId)) {
-            return true;
-        }
-        // merge the privileges of the roles of the user
-        for (String roleName : user.getRoleList()) {
-            Role role = roleManager.getRole(roleName);
-            if (role.checkPrivilege(path, privilegeId)) {
-                return true;
+            if (!response.indicatesSuccess()) {
+                // We got an error response...
+                TokenErrorResponse errorResponse = response.toErrorResponse();
+                logger.error("Unable to Refresh Token for user {}: {}", username, errorResponse.getErrorObject().getDescription());
             }
+
+            // Get the access token, the server may also return a refresh token
+            AccessToken accessToken = response.toSuccessResponse().getTokens().getAccessToken();
+            OpenIdAuthorizer.this.accessTokenMap.put(username, accessToken);
+
+            try {
+                OpenIdAuthorizer.super.login(accessToken.getValue(), "");
+            } catch (AuthException e) {
+                logger.error("Unable to refresh login for user {}", username, e);
+            }
+
+            RefreshToken newRefreshToken = response.toSuccessResponse().getTokens().getRefreshToken();
+            final long expiresIn = accessToken.getLifetime();
+
+            // Reschedule itself
+            OpenIdAuthorizer.this.executorService.schedule(new RefreshTokenCommand(fixedEndpoint, clientAuth, newRefreshToken, username), expiresIn - 10, TimeUnit.SECONDS);
         }
-        return false;
     }
-
-    @Override
-    public void updateUserPassword(String username, String newPassword) throws AuthException {
-        throwUnsupportedOperationException();
-    }
-
 }
