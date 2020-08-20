@@ -21,6 +21,8 @@ package org.apache.iotdb.tsfile.read.common;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.List;
+
 public class PathTest {
   @Test
   public void testPath() {
@@ -42,5 +44,21 @@ public class PathTest {
   public void testWrongPath() {
     Path c = new Path("root.\"sg\".\"d1\".\"s1\"\"", true);
     System.out.println(c.getMeasurement());
+  }
+
+  @Test
+  public void testNewRegex() {
+    final List<String> segments = Path.generateSegments("a.\"b\\\"\".c");
+    assertEquals("a", segments.get(0));
+    assertEquals("b\"", segments.get(1));
+    assertEquals("c", segments.get(2));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testNewRegexFails() {
+    final List<String> segments = Path.generateSegments("a.");
+    assertEquals("a", segments.get(0));
+    assertEquals("b\"", segments.get(1));
+    assertEquals("c", segments.get(2));
   }
 }

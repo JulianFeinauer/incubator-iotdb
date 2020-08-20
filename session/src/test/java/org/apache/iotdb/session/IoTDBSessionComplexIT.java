@@ -66,6 +66,20 @@ public class IoTDBSessionComplexIT {
   }
 
   @Test
+  public void testEscapeTicks() throws IoTDBConnectionException, StatementExecutionException {
+    session = new Session("127.0.0.1", 6667, "root", "root");
+    session.open();
+
+    session.setStorageGroup("root.\"sg1\"");
+
+    session.createTimeseries("root.\"sg1\".\"d1.d1\".s1", TSDataType.INT64, TSEncoding.RLE,
+        CompressionType.SNAPPY);
+
+    session.close();
+
+  }
+
+  @Test
   public void testInsertByStr() throws IoTDBConnectionException, StatementExecutionException {
     session = new Session("127.0.0.1", 6667, "root", "root");
     session.open();

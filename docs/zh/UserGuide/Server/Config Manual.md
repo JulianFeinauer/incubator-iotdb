@@ -525,7 +525,7 @@
 |类型| String |
 |默认值|org.apache.iotdb.db.auth.authorizer.LocalFileAuthorizer |
 |改后生效方式|重启服务器生效|
-|其他可选值| org.apache.iotdb.db.auth.authorizer.OpenIdAuthorizer |
+|其他可选值| org.apache.iotdb.db.auth.authorizer.OpenIdTokenAuthorizer |
 
 * openID\_url
 

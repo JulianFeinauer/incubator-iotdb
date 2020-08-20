@@ -41,7 +41,7 @@ public class OpenIdAuthorizer extends OpenIdTokenAuthorizer {
 
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
-    private final Map<String, AccessToken> accessTokenMap = new ConcurrentHashMap<>();
+    protected final Map<String, AccessToken> accessTokenMap = new ConcurrentHashMap<>();
 
     private URI tokenEndpointURI;
 

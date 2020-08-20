@@ -580,7 +580,7 @@ The permission definitions are in ${IOTDB\_CONF}/conf/jmx.access.
 |Type| String |
 |Default|org.apache.iotdb.db.auth.authorizer.LocalFileAuthorizer |
 |Effective|After restart system|
-|Other available values| org.apache.iotdb.db.auth.authorizer.OpenIdAuthorizer |
+|Other available values| org.apache.iotdb.db.auth.authorizer.OpenIdTokenAuthorizer |
 
 * openID\_url
 
