@@ -21,7 +21,7 @@ import java.util.Optional;
 
 import static org.junit.Assert.*;
 
-public class DittoBasedAuthorizerTest {
+public class DittoBasedAuthorizerMT {
 
     @Test
     public void testCheckPrivileges() throws URISyntaxException, AuthException, ParseException, IOException {

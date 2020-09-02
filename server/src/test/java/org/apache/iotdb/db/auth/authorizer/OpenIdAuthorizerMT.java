@@ -14,7 +14,7 @@ import java.net.URISyntaxException;
 
 import static org.junit.Assert.*;
 
-public class OpenIdAuthorizerTest {
+public class OpenIdAuthorizerMT {
 
     /**
      * Can be run manually as long as the site below is active...
