@@ -145,9 +145,13 @@ public class PlannerTest {
     PhysicalPlan plan12 = processor.parseSQLToPhysicalPlan(createTSStatement2);
     assertEquals(OperatorType.CREATE_TIMESERIES, plan12.getOperatorType());
 
+    String createTSStatement3 = "create timeseries root.a.b.d_1.1s with datatype=JSON,encoding=PLAIN";
+    PhysicalPlan plan13 = processor.parseSQLToPhysicalPlan(createTSStatement3);
+    assertEquals(OperatorType.CREATE_TIMESERIES, plan13.getOperatorType());
+
     String queryStatement2 = "select windDirection10min from root.national.4.5.585.9_6666.9_333.88_9";
-    PhysicalPlan plan13 = processor.parseSQLToPhysicalPlan(queryStatement2);
-    assertEquals(OperatorType.QUERY, plan13.getOperatorType());
+    PhysicalPlan plan14 = processor.parseSQLToPhysicalPlan(queryStatement2);
+    assertEquals(OperatorType.QUERY, plan14.getOperatorType());
 
     String insertStatementException = "insert into root.vehicle.d0(timestamp,s0,s1) values(10,100)";
     try {

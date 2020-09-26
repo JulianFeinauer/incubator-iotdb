@@ -51,7 +51,7 @@ public class TVListAllocator implements TVListAllocatorMBean, IService {
   }
 
   public synchronized TVList allocate(TSDataType dataType) {
-    Queue<TVList> tvLists = tvListCache.computeIfAbsent(dataType,
+    Queue<TVList> tvLists = tvListCache.computeIfAbsent(TSDataType.JSON == dataType ? TSDataType.TEXT : dataType,
         k -> new ArrayDeque<>());
     TVList list = tvLists.poll();
     return list != null ? list : TVList.newList(dataType);

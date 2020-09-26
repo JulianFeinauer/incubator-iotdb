@@ -329,6 +329,7 @@ public abstract class TVList {
   public static TVList newList(TSDataType dataType) {
     switch (dataType) {
       case TEXT:
+      case JSON:
         return new BinaryTVList();
       case FLOAT:
         return new FloatTVList();
@@ -340,8 +341,9 @@ public abstract class TVList {
         return new DoubleTVList();
       case BOOLEAN:
         return new BooleanTVList();
+      default:
+        throw new RuntimeException("Unknown Datatype " + dataType);
     }
-    return null;
   }
 
   /**

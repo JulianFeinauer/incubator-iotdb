@@ -77,6 +77,7 @@ public class ReadOnlyMemChunk {
             statsByType.update(timeValuePair.getTimestamp(), timeValuePair.getValue().getBoolean());
             break;
           case TEXT:
+          case JSON:
             statsByType.update(timeValuePair.getTimestamp(), timeValuePair.getValue().getBinary());
             break;
           case FLOAT:

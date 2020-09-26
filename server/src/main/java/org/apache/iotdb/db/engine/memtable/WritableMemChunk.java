@@ -53,6 +53,7 @@ public class WritableMemChunk implements IWritableMemChunk {
         putDouble(insertTime, (double) objectValue);
         break;
       case TEXT:
+      case JSON:
         putBinary(insertTime, (Binary) objectValue);
         break;
       default:
@@ -84,6 +85,7 @@ public class WritableMemChunk implements IWritableMemChunk {
         putDoubles(times, doubleValues, start, end);
         break;
       case TEXT:
+      case JSON:
         Binary[] binaryValues = (Binary[]) valueList;
         putBinaries(times, binaryValues, start, end);
         break;

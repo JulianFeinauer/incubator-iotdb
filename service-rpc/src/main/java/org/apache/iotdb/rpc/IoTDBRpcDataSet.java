@@ -148,6 +148,7 @@ public class IoTDBRpcDataSet {
           values[i] = new byte[Double.BYTES];
           break;
         case TEXT:
+        case JSON:
           values[i] = null;
           break;
         default:
@@ -238,6 +239,7 @@ public class IoTDBRpcDataSet {
             valueBuffer.get(values[i]);
             break;
           case TEXT:
+          case JSON:
             int length = valueBuffer.getInt();
             values[i] = ReadWriteIOUtils.readBytes(valueBuffer, length);
             break;
@@ -389,7 +391,7 @@ public class IoTDBRpcDataSet {
     return getString(index, columnTypeDeduplicatedList.get(index), values);
   }
 
-  public String getString(int index, TSDataType tsDataType, byte[][] values) {
+  public String getString(int index, TSDataType tsDataType, byte[][] values) throws StatementExecutionException {
     switch (tsDataType) {
       case BOOLEAN:
         return String.valueOf(BytesUtils.bytesToBool(values[index]));
@@ -402,9 +404,10 @@ public class IoTDBRpcDataSet {
       case DOUBLE:
         return String.valueOf(BytesUtils.bytesToDouble(values[index]));
       case TEXT:
+      case JSON:
         return new String(values[index]);
       default:
-        return null;
+        throw new StatementExecutionException("Unknown DataType " + tsDataType);
     }
   }
 

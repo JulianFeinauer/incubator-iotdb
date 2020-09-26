@@ -217,8 +217,12 @@ public class IoTDBNonAlignJDBCResultSet extends AbstractIoTDBJDBCResultSet {
         || ioTDBRpcDataSet.values[index].length < 1) {
       return null;
     }
-    return ioTDBRpcDataSet
-        .getString(index, ioTDBRpcDataSet.columnTypeDeduplicatedList.get(index),
-            ioTDBRpcDataSet.values);
+    try {
+      return ioTDBRpcDataSet
+          .getString(index, ioTDBRpcDataSet.columnTypeDeduplicatedList.get(index),
+              ioTDBRpcDataSet.values);
+    } catch (StatementExecutionException e) {
+      throw new SQLException(e);
+    }
   }
 }

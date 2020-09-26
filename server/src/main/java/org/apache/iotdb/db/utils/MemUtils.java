@@ -59,6 +59,7 @@ public class MemUtils {
       case BOOLEAN:
         return 8L + 1L;
       case TEXT:
+      case JSON:
         return 8L + getBinarySize((Binary) value);
       default:
         return 8L + 8L;
@@ -91,6 +92,7 @@ public class MemUtils {
         case BOOLEAN:
           memSize += (end - start) * (8L + 1L); break;
         case TEXT:
+        case JSON:
           memSize += (end - start) * 8L;
           for (int j = start; j < end; j++) {
             memSize += getBinarySize(((Binary[]) insertTabletPlan.getColumns()[i])[j]);

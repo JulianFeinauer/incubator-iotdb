@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONValidator;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -177,6 +180,20 @@ public class InsertRowPlan extends InsertPlan {
         }
       }
     }
+    validate();
+  }
+
+  private void validate() {
+    for (int i = 0; i < measurementMNodes.length; i++) {
+      if (dataTypes[i] == TSDataType.JSON) {
+        // Check if json
+        final JSONValidator validator = JSONValidator.from(values[i].toString());
+        final boolean isValid = validator.validate();
+        if (!isValid) {
+          throw new RuntimeException("The given String '" + values[i] + "' is no valid JSON String!");
+        }
+      }
+    }
   }
 
   @Override
@@ -277,6 +294,7 @@ public class InsertRowPlan extends InsertPlan {
           ReadWriteIOUtils.write((Double) values[i], outputStream);
           break;
         case TEXT:
+        case JSON:
           ReadWriteIOUtils.write((Binary) values[i], outputStream);
           break;
         default:
@@ -313,6 +331,7 @@ public class InsertRowPlan extends InsertPlan {
           ReadWriteIOUtils.write((Double) values[i], buffer);
           break;
         case TEXT:
+        case JSON:
           ReadWriteIOUtils.write((Binary) values[i], buffer);
           break;
         default:
@@ -352,6 +371,7 @@ public class InsertRowPlan extends InsertPlan {
           values[i] = ReadWriteIOUtils.readDouble(buffer);
           break;
         case TEXT:
+        case JSON:
           values[i] = ReadWriteIOUtils.readBinary(buffer);
           break;
         default:

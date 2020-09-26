@@ -155,6 +155,7 @@ public class MemTableFlushTask {
             seriesWriterImpl.write(time, tvPairs.getDouble(i));
             break;
           case TEXT:
+          case JSON:
             seriesWriterImpl.write(time, tvPairs.getBinary(i));
             break;
           default:

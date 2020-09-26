@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public enum TSDataType {
-  BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT;
+  BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT, JSON;
 
   /**
    * give an integer to return a data type.
@@ -32,7 +32,7 @@ public enum TSDataType {
    * @return -enum type
    */
   public static TSDataType deserialize(short i) {
-    if (i >= 6) {
+    if (i >= 7) {
       throw new IllegalArgumentException("Invalid input: " + i);
     }
     switch (i) {
@@ -48,6 +48,8 @@ public enum TSDataType {
         return DOUBLE;
       case 5:
         return TEXT;
+      case 6:
+        return JSON;
       default:
         return TEXT;
     }
@@ -88,6 +90,8 @@ public enum TSDataType {
         return 4;
       case TEXT:
         return 5;
+      case JSON:
+        return 6;
       default:
         return -1;
     }

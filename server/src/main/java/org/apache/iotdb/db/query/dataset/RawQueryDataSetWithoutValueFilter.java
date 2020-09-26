@@ -272,6 +272,7 @@ public class RawQueryDataSetWithoutValueFilter extends QueryDataSet {
                     valueBAOSList[seriesIndex]);
                 break;
               case TEXT:
+              case JSON:
                 ReadWriteIOUtils
                     .write(cachedBatchDataArray[seriesIndex].getBinary(),
                         valueBAOSList[seriesIndex]);
