@@ -6,13 +6,12 @@ package org.apache.iotdb.db.auth.authorizer;
 
 import com.nimbusds.oauth2.sdk.ParseException;
 import org.apache.iotdb.db.auth.AuthException;
-import org.apache.iotdb.db.auth.entity.PrivilegeType;
 import org.eclipse.ditto.model.base.auth.AuthorizationContext;
 import org.eclipse.ditto.model.base.auth.AuthorizationSubject;
 import org.eclipse.ditto.model.enforcers.Enforcer;
 import org.eclipse.ditto.model.enforcers.PolicyEnforcers;
+import org.eclipse.ditto.model.policies.PoliciesResourceType;
 import org.eclipse.ditto.model.policies.Policy;
-import org.eclipse.ditto.model.policies.ResourceKey;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -27,17 +26,28 @@ public class DittoBasedAuthorizerMT {
     public void testCheckPrivileges() throws URISyntaxException, AuthException, ParseException, IOException {
         final DittoBasedAuthorizer dittoBasedAuthorizer = new DittoBasedAuthorizer("http://192.168.169.18:8088/auth/realms/IoTDB/", "https://twin.pragmaticindustries.de/");
 
-        final Optional<String> policyForThing = dittoBasedAuthorizer.fetchPolicyForThing("", "org.apache.plc4x.examples", "0a7492e3a7ee4dae9377614d9c4c84bc");
+        final Optional<String> policyForThing = dittoBasedAuthorizer.fetchPolicyForThing("", "org.apache.plc4x.examples:0a7492e3a7ee4dae9377614d9c4c84bc");
 
         assertTrue(policyForThing.isPresent());
         assertEquals("org.apache.plc4x.examples:0a7492e3a7ee4dae9377614d9c4c84bc", policyForThing.get());
     }
 
     @Test
+    public void canRead() throws URISyntaxException, AuthException, ParseException, IOException {
+        final DittoBasedAuthorizer dittoBasedAuthorizer = new DittoBasedAuthorizer("http://192.168.169.18:8088/auth/realms/IoTDB/", "https://twin.pragmaticindustries.de/");
+
+        dittoBasedAuthorizer.login("mqtt", "mqtt");
+
+        final boolean canRead = dittoBasedAuthorizer.hasPermission("nginx:mqtt", "org.apache.plc4x.examples:0a7492e3a7ee4dae9377614d9c4c84bc", "my-feature", "/", "HISTORY");
+
+        assertTrue(canRead);
+    }
+
+    @Test
     public void testCheckPolicy() throws URISyntaxException, AuthException, ParseException, IOException {
         final DittoBasedAuthorizer dittoBasedAuthorizer = new DittoBasedAuthorizer("http://192.168.169.18:8088/auth/realms/IoTDB/", "https://twin.pragmaticindustries.de/");
 
-        final Optional<Policy> policyForThing = dittoBasedAuthorizer.fetchPolicy("", "org.apache.plc4x.examples", "0a7492e3a7ee4dae9377614d9c4c84bc");
+        final Optional<Policy> policyForThing = dittoBasedAuthorizer.fetchPolicy("", "org.apache.plc4x.examples:0a7492e3a7ee4dae9377614d9c4c84bc");
 
         assertTrue(policyForThing.isPresent());
         assertTrue(policyForThing.get().getEntityId().isPresent());
@@ -45,7 +55,7 @@ public class DittoBasedAuthorizerMT {
 
         final Enforcer enforcer = PolicyEnforcers.defaultEvaluator(policyForThing.get());
 
-        final boolean hasPermission = enforcer.hasPartialPermissions(ResourceKey.newInstance("thing", "/my/test/path"), AuthorizationContext.newInstance(AuthorizationSubject.newInstance("nginx:mqtt")), "HISTORY");
+        final boolean hasPermission = enforcer.hasPartialPermissions(PoliciesResourceType.thingResource("/my/test/path"), AuthorizationContext.newInstance(AuthorizationSubject.newInstance("nginx:mqtt")), "HISTORY");
 
         assertTrue(hasPermission);
     }
