@@ -91,7 +91,7 @@ public class Schema implements Serializable {
     if (!registeredTimeseries.containsKey(path)) {
       return null;
     }
-    return registeredTimeseries.get(path).getType();
+    return registeredTimeseries.get(path).getPhysicalType();
   }
 
   public Map<String, Map<String, MeasurementSchema>> getDeviceTemplates() {

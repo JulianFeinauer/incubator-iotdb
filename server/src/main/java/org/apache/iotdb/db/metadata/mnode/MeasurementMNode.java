@@ -46,14 +46,26 @@ public class MeasurementMNode extends MNode {
 
   private TimeValuePair cachedLastValuePair = null;
 
+  public MeasurementMNode(MNode parent, String measurementName, String alias, TSDataType dataType, Integer logicalType,
+                          TSEncoding encoding, CompressionType type, Map<String, String> props) {
+    this(parent, measurementName,
+        createSchema(measurementName, dataType, logicalType, encoding, type, props), alias);
+  }
+
+  private static MeasurementSchema createSchema(String measurementName, TSDataType dataType, Integer logicalType, TSEncoding encoding, CompressionType type, Map<String, String> props) {
+    if (logicalType != null) {
+      return new MeasurementSchema(measurementName, dataType, logicalType, encoding, type, props);
+    } else {
+      return new MeasurementSchema(measurementName, dataType, -1, encoding, type, props);
+    }
+  }
+
   /**
    * @param alias alias of measurementName
    */
   public MeasurementMNode(MNode parent, String measurementName, String alias, TSDataType dataType,
       TSEncoding encoding, CompressionType type, Map<String, String> props) {
-    super(parent, measurementName);
-    this.schema = new MeasurementSchema(measurementName, dataType, encoding, type, props);
-    this.alias = alias;
+    this(parent, measurementName, alias, dataType, null, encoding, type, props);
   }
 
   public MeasurementMNode(MNode parent, String measurementName, MeasurementSchema schema,
@@ -129,7 +141,7 @@ public class MeasurementMNode extends MNode {
     if (alias != null) {
       s.append(alias);
     }
-    s.append(",").append(schema.getType().ordinal()).append(",");
+    s.append(",").append(schema.getPhysicalType().ordinal()).append(",");
     s.append(schema.getEncodingType().ordinal()).append(",");
     s.append(schema.getCompressor().ordinal()).append(",");
     if (schema.getProps() != null) {

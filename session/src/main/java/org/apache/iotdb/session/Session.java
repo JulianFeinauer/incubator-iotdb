@@ -258,7 +258,7 @@ public class Session {
     request.deviceId = tablet.deviceId;
     for (MeasurementSchema measurementSchema : tablet.getSchemas()) {
       request.addToMeasurements(measurementSchema.getMeasurementId());
-      request.addToTypes(measurementSchema.getType().ordinal());
+      request.addToTypes(measurementSchema.getPhysicalType().ordinal());
     }
     request.setTimestamps(SessionUtils.getTimeBuffer(tablet));
     request.setValues(SessionUtils.getValueBuffer(tablet));
@@ -316,7 +316,7 @@ public class Session {
       List<Integer> dataTypes = new ArrayList<>();
       for (MeasurementSchema measurementSchema : tablet.getSchemas()) {
         measurements.add(measurementSchema.getMeasurementId());
-        dataTypes.add(measurementSchema.getType().ordinal());
+        dataTypes.add(measurementSchema.getPhysicalType().ordinal());
       }
       request.addToMeasurementsList(measurements);
       request.addToTypesList(dataTypes);
@@ -989,7 +989,7 @@ public class Session {
     Arrays.sort(tablet.timestamps, 0, tablet.rowSize);
     for (int i = 0; i < tablet.getSchemas().size(); i++) {
       tablet.values[i] =
-          sortList(tablet.values[i], tablet.getSchemas().get(i).getType(), index);
+          sortList(tablet.values[i], tablet.getSchemas().get(i).getPhysicalType(), index);
     }
   }
 

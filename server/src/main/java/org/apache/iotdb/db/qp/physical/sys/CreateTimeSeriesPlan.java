@@ -38,6 +38,7 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
 
   private PartialPath path;
   private TSDataType dataType;
+  private String logicalType;
   private TSEncoding encoding;
   private CompressionType compressor;
   private String alias;
@@ -51,11 +52,21 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
   }
 
   public CreateTimeSeriesPlan(PartialPath path, TSDataType dataType, TSEncoding encoding,
+                              CompressionType compressor, Map<String, String> props, Map<String, String> tags,
+                              Map<String, String> attributes, String alias) {
+    this(path, dataType, null, encoding, compressor, props, tags, attributes, alias);
+  }
+
+  public CreateTimeSeriesPlan(PartialPath path, TSDataType dataType, String logicalType, TSEncoding encoding,
       CompressionType compressor, Map<String, String> props, Map<String, String> tags,
       Map<String, String> attributes, String alias) {
     super(false, Operator.OperatorType.CREATE_TIMESERIES);
     this.path = path;
+    if (this.dataType == TSDataType.UDT && this.logicalType == null || this.logicalType != null && this.dataType != TSDataType.UDT) {
+      throw new RuntimeException("If DataType is UDT then logical type needs to be set, or if logical type is set, dataType has to be UDT!");
+    }
     this.dataType = dataType;
+    this.logicalType = logicalType;
     this.encoding = encoding;
     this.compressor = compressor;
     this.props = props;
@@ -79,6 +90,14 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
 
   public void setDataType(TSDataType dataType) {
     this.dataType = dataType;
+  }
+
+  public String getLogicalType() {
+    return logicalType;
+  }
+
+  public void setLogicalType(String logicalType) {
+    this.logicalType = logicalType;
   }
 
   public CompressionType getCompressor() {
@@ -147,6 +166,15 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
     stream.writeInt(bytes.length);
     stream.write(bytes);
     stream.write(dataType.ordinal());
+
+    // logical type
+    if (logicalType != null) {
+      stream.write(1);
+      ReadWriteIOUtils.write(logicalType, stream);
+    } else {
+      stream.write(0);
+    }
+
     stream.write(encoding.ordinal());
     stream.write(compressor.ordinal());
 
@@ -190,6 +218,12 @@ public class CreateTimeSeriesPlan extends PhysicalPlan {
     buffer.get(bytes);
     path = new PartialPath(new String(bytes));
     dataType = TSDataType.values()[buffer.get()];
+
+    // logical type
+    if (buffer.get() == 1) {
+      logicalType = ReadWriteIOUtils.readString(buffer);
+    }
+
     encoding = TSEncoding.values()[buffer.get()];
     compressor = CompressionType.values()[buffer.get()];
 

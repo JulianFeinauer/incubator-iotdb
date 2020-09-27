@@ -121,7 +121,7 @@ public class Tablet {
     int indexOfValue = measurementIndex.get(measurementId);
     MeasurementSchema measurementSchema = schemas.get(indexOfValue);
 
-    switch (measurementSchema.getType()) {
+    switch (measurementSchema.getPhysicalType()) {
       case TEXT: {
         Binary[] sensor = (Binary[]) values[indexOfValue];
         sensor[rowIndex] = (Binary) value;
@@ -154,7 +154,7 @@ public class Tablet {
       }
       default:
         throw new UnSupportedDataTypeException(
-            String.format("Data type %s is not supported.", measurementSchema.getType()));
+            String.format("Data type %s is not supported.", measurementSchema.getPhysicalType()));
     }
   }
 
@@ -182,7 +182,7 @@ public class Tablet {
     values = new Object[schemas.size()];
     // create value columns
     for (int i = 0; i < schemas.size(); i++) {
-      TSDataType dataType = schemas.get(i).getType();
+      TSDataType dataType = schemas.get(i).getPhysicalType();
       switch (dataType) {
       case INT32:
         values[i] = new int[maxRowNumber];
@@ -221,7 +221,7 @@ public class Tablet {
      */
     int valueOccupation = 0;
     for (int i = 0; i < schemas.size(); i++) {
-      switch (schemas.get(i).getType()) {
+      switch (schemas.get(i).getPhysicalType()) {
       case BOOLEAN:
         valueOccupation += rowSize;
         break;
@@ -245,7 +245,7 @@ public class Tablet {
         break;
       default:
         throw new UnSupportedDataTypeException(
-            String.format("Data type %s is not supported.", schemas.get(i).getType()));
+            String.format("Data type %s is not supported.", schemas.get(i).getPhysicalType()));
       }
     }
     return valueOccupation;

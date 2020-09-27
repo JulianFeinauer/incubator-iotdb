@@ -18,17 +18,6 @@
  */
 package org.apache.iotdb.db.qp.strategy;
 
-import static org.apache.iotdb.db.qp.constant.SQLConstant.TIME_PATH;
-
-import java.io.File;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
@@ -184,6 +173,18 @@ import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.utils.StringContainer;
+
+import java.io.File;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.iotdb.db.qp.constant.SQLConstant.TIME_PATH;
 
 /**
  * This class is a listener and you can get an operator which is a logical plan.
@@ -783,7 +784,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     } else if (src.charAt(0) == '\"' && src.charAt(src.length() - 1) == '\"') {
       return src.substring(1, src.length() - 1);
     } else {
-      throw new SQLParserException("error format for string with quote:" + src);
+      return src;
     }
   }
 
@@ -1145,7 +1146,7 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     List<String> valueList = new ArrayList<>();
     List<ConstantContext> values = ctx.constant();
     for (ConstantContext value : values) {
-      valueList.add(value.getText());
+      valueList.add(removeStringQuote(value.getText()));
     }
     insertOp.setValueList(valueList.toArray(new String[0]));
     initializedOperator = insertOp;
@@ -1165,13 +1166,28 @@ public class LogicalGenerator extends SqlBaseBaseListener {
     return new PartialPath(path);
   }
 
+  private boolean isUDT(String type) {
+    try {
+      TSDataType.valueOf(type);
+      return false;
+    } catch (IllegalArgumentException e) {
+      return true;
+    }
+  }
+
   @Override
   public void enterAttributeClauses(AttributeClausesContext ctx) {
     super.enterAttributeClauses(ctx);
     String dataType = ctx.dataType().getChild(0).getText().toUpperCase();
     String encoding = ctx.encoding().getChild(0).getText().toUpperCase();
-    createTimeSeriesOperator.setDataType(TSDataType.valueOf(dataType));
-    createTimeSeriesOperator.setEncoding(TSEncoding.valueOf(encoding));
+    if (isUDT(dataType)) {
+      // Store as UDT
+      createTimeSeriesOperator.setDataType(TSDataType.UDT);
+      createTimeSeriesOperator.setUserDefinedType(dataType);
+    } else {
+      createTimeSeriesOperator.setDataType(TSDataType.valueOf(dataType));
+      createTimeSeriesOperator.setEncoding(TSEncoding.valueOf(encoding));
+    }
     CompressionType compressor;
     List<PropertyContext> properties = ctx.property();
     if (ctx.compressor() != null) {

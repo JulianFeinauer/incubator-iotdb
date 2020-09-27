@@ -85,7 +85,6 @@ public class CommonUtils {
         case DOUBLE:
           return Double.parseDouble(value);
         case TEXT:
-        case JSON:
           if ((value.startsWith(SQLConstant.QUOTE) && value.endsWith(SQLConstant.QUOTE))
               || (value.startsWith(SQLConstant.DQUOTE) && value.endsWith(SQLConstant.DQUOTE))) {
             if (value.length() == 1) {

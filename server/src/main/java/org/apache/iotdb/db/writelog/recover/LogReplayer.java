@@ -168,7 +168,8 @@ public class LogReplayer {
       //WAL already serializes the real data type, so no need to infer type
       tPlan.setMeasurementMNodes(mNodes);
       ((InsertRowPlan) plan).setNeedInferType(false);
-      tPlan.transferType();
+      // TODO Question, if we dont want to infer the type, why then call this method?
+      // tPlan.transferType(null);
       //mark failed plan manually 
       checkDataTypeAndMarkFailed(mNodes, tPlan);
       recoverMemTable.insert(tPlan);
@@ -188,7 +189,7 @@ public class LogReplayer {
 
   private void checkDataTypeAndMarkFailed(final MeasurementMNode[] mNodes, InsertPlan tPlan) {
     for (int i = 0; i < mNodes.length; i++) {
-      if (mNodes[i] == null || mNodes[i].getSchema().getType() != tPlan.getDataTypes()[i]) {
+      if (mNodes[i] == null || mNodes[i].getSchema().getPhysicalType() != tPlan.getDataTypes()[i]) {
         tPlan.markFailedMeasurementInsertion(i);
       }
     }

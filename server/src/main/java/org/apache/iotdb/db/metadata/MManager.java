@@ -48,6 +48,7 @@ import org.apache.iotdb.db.conf.adapter.ActiveTimeSeriesCounter;
 import org.apache.iotdb.db.conf.adapter.IoTDBConfigDynamicAdapter;
 import org.apache.iotdb.db.engine.StorageEngine;
 import org.apache.iotdb.db.engine.fileSystem.SystemFileFactory;
+import org.apache.iotdb.db.engine.udt.TypeManager;
 import org.apache.iotdb.db.exception.ConfigAdjusterException;
 import org.apache.iotdb.db.exception.metadata.DeleteFailedException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -370,6 +371,11 @@ public class MManager {
 
   @SuppressWarnings("squid:S3776") // Suppress high Cognitive Complexity warning
   public void createTimeseries(CreateTimeSeriesPlan plan, long offset) throws MetadataException {
+    // TODO if we want to go from UDT to Physical Type creation, do it here
+    final TypeManager typeManager = TypeManager.getInstance();
+
+    plan = typeManager.makePhysicalPlan(plan);
+
     lock.writeLock().lock();
     try {
       PartialPath path = plan.getPath();
@@ -394,7 +400,7 @@ public class MManager {
 
       // create time series in MTree
       MeasurementMNode leafMNode = mtree
-          .createTimeseries(path, plan.getDataType(), plan.getEncoding(), plan.getCompressor(),
+          .createTimeseries(path, plan.getDataType(), plan.getLogicalType(), plan.getEncoding(), plan.getCompressor(),
               plan.getProps(), plan.getAlias());
 
       // update tag index
@@ -674,7 +680,7 @@ public class MManager {
         return TSDataType.INT64;
       }
 
-      return mtree.getSchema(path).getType();
+      return mtree.getSchema(path).getPhysicalType();
     } finally {
       lock.readLock().unlock();
     }
@@ -942,7 +948,7 @@ public class MManager {
             MeasurementSchema measurementSchema = leaf.getSchema();
             res.add(new ShowTimeSeriesResult(leaf.getFullPath(), leaf.getAlias(),
                 getStorageGroupPath(leaf.getPartialPath()).getFullPath(),
-                measurementSchema.getType().toString(),
+                measurementSchema.getPhysicalType().toString(),
                 measurementSchema.getEncodingType().toString(),
                 measurementSchema.getCompressor().toString(), pair.left));
             if (limit != 0) {
@@ -1771,7 +1777,7 @@ public class MManager {
       MNode node = nodeDeque.removeFirst();
       if (node instanceof MeasurementMNode) {
         MeasurementSchema nodeSchema = ((MeasurementMNode) node).getSchema();
-        timeseriesSchemas.add(new TimeseriesSchema(node.getFullPath(), nodeSchema.getType(),
+        timeseriesSchemas.add(new TimeseriesSchema(node.getFullPath(), nodeSchema.getPhysicalType(),
             nodeSchema.getEncodingType(), nodeSchema.getCompressor()));
       } else if (!node.getChildren().isEmpty()) {
         nodeDeque.addAll(node.getChildren().values());
@@ -1787,7 +1793,7 @@ public class MManager {
       MNode node = nodeDeque.removeFirst();
       if (node instanceof MeasurementMNode) {
         MeasurementSchema nodeSchema = ((MeasurementMNode) node).getSchema();
-        timeseriesSchemas.add(new MeasurementSchema(node.getFullPath(), nodeSchema.getType(),
+        timeseriesSchemas.add(new MeasurementSchema(node.getFullPath(), nodeSchema.getPhysicalType(),
             nodeSchema.getEncodingType(), nodeSchema.getCompressor()));
       } else if (!node.getChildren().isEmpty()) {
         nodeDeque.addAll(node.getChildren().values());
@@ -1979,19 +1985,19 @@ public class MManager {
             // only when InsertRowPlan's values is object[], we should check type
             insertDataType = getTypeInLoc(plan, i);
           } else {
-            insertDataType = measurementMNode.getSchema().getType();
+            insertDataType = measurementMNode.getSchema().getPhysicalType();
           }
         } else if (plan instanceof InsertTabletPlan) {
           insertDataType = getTypeInLoc(plan, i);
         }
 
-        if (measurementMNode.getSchema().getType() != insertDataType) {
+        if (measurementMNode.getSchema().getPhysicalType() != insertDataType) {
           logger.warn("DataType mismatch, Insert measurement {} type {}, metadata tree type {}",
-              measurementList[i], insertDataType, measurementMNode.getSchema().getType());
+              measurementList[i], insertDataType, measurementMNode.getSchema().getPhysicalType());
           if (!config.isEnablePartialInsert()) {
             throw new MetadataException(String.format(
                 "DataType mismatch, Insert measurement %s type %s, metadata tree type %s",
-                measurementList[i], insertDataType, measurementMNode.getSchema().getType()));
+                measurementList[i], insertDataType, measurementMNode.getSchema().getPhysicalType()));
           } else {
             // mark failed measurement
             plan.markFailedMeasurementInsertion(i);

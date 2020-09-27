@@ -613,7 +613,7 @@ nodeNameWithoutStar
     ;
 
 dataType
-    : INT32 | INT64 | FLOAT | DOUBLE | BOOLEAN | TEXT | JSON | ALL
+    : INT32 | INT64 | FLOAT | DOUBLE | BOOLEAN | TEXT | ID | ALL
     ;
 
 dateFormat
@@ -831,10 +831,6 @@ BOOLEAN
 
 TEXT
     : T E X T
-    ;
-
-JSON
-    : J S O N
     ;
 
 ENCODING

@@ -129,7 +129,7 @@ public class MManagerAdvancedTest {
         TSFileDescriptor.getInstance().getConfig().getCompressor(), Collections.emptyMap());
 
     MNode node = mmanager.getNodeByPath(new PartialPath("root.vehicle.d0"));
-    Assert.assertEquals(TSDataType.INT32, ((MeasurementMNode) node.getChild("s0")).getSchema().getType());
+    Assert.assertEquals(TSDataType.INT32, ((MeasurementMNode) node.getChild("s0")).getSchema().getPhysicalType());
 
     try {
       mmanager.getNodeByPath(new PartialPath("root.vehicle.d100"));

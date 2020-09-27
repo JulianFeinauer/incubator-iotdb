@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public enum TSDataType {
-  BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT, JSON;
+  BOOLEAN, INT32, INT64, FLOAT, DOUBLE, TEXT, UDT;
 
   /**
    * give an integer to return a data type.
@@ -49,7 +49,7 @@ public enum TSDataType {
       case 5:
         return TEXT;
       case 6:
-        return JSON;
+        return UDT;
       default:
         return TEXT;
     }
@@ -90,7 +90,7 @@ public enum TSDataType {
         return 4;
       case TEXT:
         return 5;
-      case JSON:
+      case UDT:
         return 6;
       default:
         return -1;

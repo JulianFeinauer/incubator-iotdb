@@ -92,7 +92,7 @@ public class ChunkWriterImpl implements IChunkWriter {
     this.valueCountInOnePageForNextCheck = MINIMUM_RECORD_COUNT_FOR_CHECK;
 
     // init statistics for this chunk and page
-    this.statistics = Statistics.getStatsByType(measurementSchema.getType());
+    this.statistics = Statistics.getStatsByType(measurementSchema.getPhysicalType());
 
     this.pageWriter = new PageWriter(measurementSchema);
     this.pageWriter.setTimeEncoder(measurementSchema.getTimeEncoder());
@@ -221,7 +221,7 @@ public class ChunkWriterImpl implements IChunkWriter {
 
     // reinit this chunk writer
     pageBuffer.reset();
-    this.statistics = Statistics.getStatsByType(measurementSchema.getType());
+    this.statistics = Statistics.getStatsByType(measurementSchema.getPhysicalType());
   }
 
   @Override
@@ -252,7 +252,7 @@ public class ChunkWriterImpl implements IChunkWriter {
 
   @Override
   public TSDataType getDataType() {
-    return measurementSchema.getType();
+    return measurementSchema.getPhysicalType();
   }
 
   /**
@@ -301,7 +301,7 @@ public class ChunkWriterImpl implements IChunkWriter {
     }
 
     // start to write this column chunk
-    writer.startFlushChunk(measurementSchema, compressor.getType(), measurementSchema.getType(),
+    writer.startFlushChunk(measurementSchema, compressor.getType(), measurementSchema.getPhysicalType(),
         measurementSchema.getEncodingType(), statistics, pageBuffer.size(), numOfPages);
 
     long dataOffset = writer.getPos();

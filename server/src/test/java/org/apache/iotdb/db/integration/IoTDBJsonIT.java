@@ -41,7 +41,7 @@ public class IoTDBJsonIT {
   private static String[] sqls = new String[]{
       "SET STORAGE GROUP TO root.sg",
 
-      "CREATE TIMESERIES root.sg.d1.s1(speed) WITH DATATYPE=JSON, ENCODING=PLAIN",
+      "CREATE TIMESERIES root.sg.d1(speed) WITH DATATYPE=JSON, ENCODING=PLAIN",
   };
 
   private static final String TIMESTAMP_STR = "Time";
@@ -83,6 +83,14 @@ public class IoTDBJsonIT {
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
+      // Show timeseries
+      statement.execute("SHOW TIMESERIES");
+      final ResultSet rs = statement.getResultSet();
+
+      // Ensure that its stored as TEXT
+      assertTrue(rs.next());
+      assertEquals("TEXT", rs.getString(4));
+
       // Insert
       final boolean hasResult = statement.execute("INSERT INTO root.sg.d1(timestamp,speed) values(1, '{\"key\": 1}')");
       assertFalse(hasResult);
@@ -99,6 +107,76 @@ public class IoTDBJsonIT {
         }
 
       }
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void evenNumberTest() throws ClassNotFoundException {
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection = DriverManager
+        .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+         Statement statement = connection.createStatement()) {
+
+      // Create timeseries
+      statement.execute("CREATE TIMESERIES root.sg.d2(even) WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
+
+      // Show timeseries
+      statement.execute("SHOW TIMESERIES");
+      final ResultSet rs = statement.getResultSet();
+
+      // Ensure that its stored as INT32
+      while (rs.next()) {
+        if (rs.getString(2).equals("even")) {
+          assertEquals("INT32", rs.getString(4));
+        }
+      }
+
+      // Insert
+      final boolean hasResult = statement.execute("INSERT INTO root.sg.d2(timestamp,even) values(1, 2)");
+      assertFalse(hasResult);
+
+      boolean hasResultSet = statement.execute("select * from root.sg.d2");
+      Assert.assertTrue(hasResultSet);
+
+      try (ResultSet resultSet = statement.getResultSet()) {
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+
+        while (resultSet.next()) {
+          final int even = resultSet.getInt(2);
+          assertEquals(2, even);
+        }
+
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
+  @Test
+  public void evenNumberTest_withOddNumber() throws ClassNotFoundException {
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection = DriverManager
+        .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+         Statement statement = connection.createStatement()) {
+
+      // Create timeseries
+      statement.execute("CREATE TIMESERIES root.sg.d3(even) WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
+
+      // Show timeseries
+      statement.execute("SHOW TIMESERIES");
+      final ResultSet rs = statement.getResultSet();
+
+      // Insert
+      try {
+        statement.execute("INSERT INTO root.sg.d3(timestamp,even) values(1, 3)");
+      } catch (Exception e) {
+        assertEquals("500: The value '3' is not applicable to type EVEN_NUMBER", e.getMessage());
+      }
+
     } catch (Exception e) {
       e.printStackTrace();
       fail(e.getMessage());

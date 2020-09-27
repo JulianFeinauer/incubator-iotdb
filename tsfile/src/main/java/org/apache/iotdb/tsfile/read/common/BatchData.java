@@ -202,7 +202,6 @@ public class BatchData implements Serializable {
         doubleRet.add(new double[capacity]);
         break;
       case TEXT:
-      case JSON:
         binaryRet = new ArrayList<>();
         binaryRet.add(new Binary[capacity]);
         break;
@@ -497,7 +496,6 @@ public class BatchData implements Serializable {
         putDouble(t, (double) v);
         break;
       case TEXT:
-      case JSON:
         putBinary(t, (Binary) v);
         break;
       default:

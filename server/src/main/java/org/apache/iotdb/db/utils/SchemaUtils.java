@@ -68,9 +68,6 @@ public class SchemaUtils {
     Set<TSEncoding> textSet = new HashSet<>();
     textSet.add(TSEncoding.PLAIN);
     schemaChecker.put(TSDataType.TEXT, textSet);
-    Set<TSEncoding> jsonSet = new HashSet<>();
-    jsonSet.add(TSEncoding.PLAIN);
-    schemaChecker.put(TSDataType.JSON, jsonSet);
   }
 
   private static final Logger logger = LoggerFactory.getLogger(SchemaUtils.class);

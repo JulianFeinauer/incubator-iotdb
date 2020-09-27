@@ -66,7 +66,7 @@ public class PageWriter {
 
   public PageWriter(MeasurementSchema measurementSchema) {
     this(measurementSchema.getTimeEncoder(), measurementSchema.getValueEncoder());
-    this.statistics = Statistics.getStatsByType(measurementSchema.getType());
+    this.statistics = Statistics.getStatsByType(measurementSchema.getPhysicalType());
     this.compressor = ICompressor.getCompressor(measurementSchema.getCompressor());
   }
 
@@ -286,7 +286,7 @@ public class PageWriter {
   public void reset(MeasurementSchema measurementSchema) {
     timeOut.reset();
     valueOut.reset();
-    statistics = Statistics.getStatsByType(measurementSchema.getType());
+    statistics = Statistics.getStatsByType(measurementSchema.getPhysicalType());
   }
 
   public void setTimeEncoder(Encoder encoder) {

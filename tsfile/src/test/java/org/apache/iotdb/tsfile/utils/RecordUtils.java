@@ -74,7 +74,7 @@ public class RecordUtils {
         LOG.warn("measurementId:{},type not found, pass", measurementId);
         continue;
       }
-      type = measurementSchema.getType();
+      type = measurementSchema.getPhysicalType();
       String value = items[i + 1].trim();
       // if value is not null, wrap it with corresponding DataPoint and add to
       // TSRecord

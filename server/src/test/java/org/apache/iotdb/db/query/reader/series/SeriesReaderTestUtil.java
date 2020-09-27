@@ -133,7 +133,7 @@ public class SeriesReaderTestUtil {
       for (String deviceId : deviceIds) {
         TSRecord record = new TSRecord(i, deviceId);
         for (MeasurementSchema measurementSchema : measurementSchemas) {
-          record.addTuple(DataPoint.getDataPoint(measurementSchema.getType(),
+          record.addTuple(DataPoint.getDataPoint(measurementSchema.getPhysicalType(),
               measurementSchema.getMeasurementId(), String.valueOf(i + valueOffset)));
         }
         fileWriter.write(record);
@@ -163,7 +163,7 @@ public class SeriesReaderTestUtil {
       for (MeasurementSchema measurementSchema : measurementSchemas) {
         IoTDB.metaManager.createTimeseries(
             new PartialPath(device + PATH_SEPARATOR + measurementSchema.getMeasurementId()), measurementSchema
-                .getType(), measurementSchema.getEncodingType(), measurementSchema.getCompressor(),
+                .getPhysicalType(), measurementSchema.getEncodingType(), measurementSchema.getCompressor(),
             Collections.emptyMap());
       }
     }

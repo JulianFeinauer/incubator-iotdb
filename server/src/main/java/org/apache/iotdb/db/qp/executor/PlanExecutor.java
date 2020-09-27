@@ -69,6 +69,7 @@ import org.apache.iotdb.db.engine.merge.manage.MergeManager;
 import org.apache.iotdb.db.engine.merge.manage.MergeManager.TaskStatus;
 import org.apache.iotdb.db.engine.storagegroup.StorageGroupProcessor.TimePartitionFilter;
 import org.apache.iotdb.db.engine.storagegroup.TsFileResource;
+import org.apache.iotdb.db.engine.udt.TypeManager;
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.metadata.DeleteFailedException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -832,7 +833,7 @@ public class PlanExecutor implements IPlanExecutor {
             if (!node.hasChild(chunkMetadata.getMeasurementUid())) {
               mManager.createTimeseries(
                   series,
-                  schema.getType(),
+                  schema.getPhysicalType(),
                   schema.getEncodingType(),
                   schema.getCompressor(),
                   Collections.emptyMap());
@@ -919,15 +920,19 @@ public class PlanExecutor implements IPlanExecutor {
 
   @Override
   public void insert(InsertRowPlan insertRowPlan) throws QueryProcessException {
+    // TODO If we want to go from UDT Insert into Physical Insert do it here
+    InsertRowPlan physicalPlan = TypeManager.getInstance().makePhysicalPlan(insertRowPlan);
+
     MNode deviceNode = null;
     try {
-      insertRowPlan.setMeasurementMNodes(new MeasurementMNode[insertRowPlan.getMeasurements().length]);
-      deviceNode = getSeriesSchemas(insertRowPlan);
-      insertRowPlan.transferType();
-      StorageEngine.getInstance().insert(insertRowPlan);
-      if (insertRowPlan.getFailedMeasurements() != null) {
+      physicalPlan.setMeasurementMNodes(new MeasurementMNode[physicalPlan.getMeasurements().length]);
+      deviceNode = getSeriesSchemas(physicalPlan);
+
+      physicalPlan.transferType();
+      StorageEngine.getInstance().insert(physicalPlan);
+      if (physicalPlan.getFailedMeasurements() != null) {
         throw new StorageEngineException(
-            "failed to insert measurements " + insertRowPlan.getFailedMeasurements());
+            "failed to insert measurements " + physicalPlan.getFailedMeasurements());
       }
     } catch (StorageEngineException | MetadataException e) {
       throw new QueryProcessException(e);

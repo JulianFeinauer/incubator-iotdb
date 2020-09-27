@@ -30,6 +30,7 @@ public class CreateTimeSeriesOperator extends RootOperator {
   private PartialPath path;
   private String alias;
   private TSDataType dataType;
+  private String userDefinedType;
   private TSEncoding encoding;
   private CompressionType compressor;
   private Map<String, String> props = null;
@@ -55,6 +56,14 @@ public class CreateTimeSeriesOperator extends RootOperator {
 
   public void setDataType(TSDataType dataType) {
     this.dataType = dataType;
+  }
+
+  public String getUserDefinedType() {
+    return userDefinedType;
+  }
+
+  public void setUserDefinedType(String userDefinedType) {
+    this.userDefinedType = userDefinedType;
   }
 
   public TSEncoding getEncoding() {

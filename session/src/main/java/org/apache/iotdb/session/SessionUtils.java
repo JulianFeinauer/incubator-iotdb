@@ -41,7 +41,7 @@ public class SessionUtils {
   public static ByteBuffer getValueBuffer(Tablet tablet) {
     ByteBuffer valueBuffer = ByteBuffer.allocate(tablet.getValueBytesSize());
     for (int i = 0; i < tablet.getSchemas().size(); i++) {
-      TSDataType dataType = tablet.getSchemas().get(i).getType();
+      TSDataType dataType = tablet.getSchemas().get(i).getPhysicalType();
       switch (dataType) {
         case INT32:
           int[] intValues = (int[]) tablet.values[i];

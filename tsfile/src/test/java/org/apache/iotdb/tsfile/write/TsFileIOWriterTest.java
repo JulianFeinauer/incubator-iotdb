@@ -54,13 +54,13 @@ public class TsFileIOWriterTest {
     schema.registerTimeseries(new Path(deviceId, "sensor01"), measurementSchema);
 
     // chunk statistics
-    Statistics statistics = Statistics.getStatsByType(measurementSchema.getType());
+    Statistics statistics = Statistics.getStatsByType(measurementSchema.getPhysicalType());
     statistics.updateStats(0L, 0L);
 
     // chunk group 1
     writer.startChunkGroup(deviceId);
     writer.startFlushChunk(measurementSchema, measurementSchema.getCompressor(),
-        measurementSchema.getType(),
+        measurementSchema.getPhysicalType(),
         measurementSchema.getEncodingType(), statistics, 0, 0);
     writer.endCurrentChunk();
     writer.endChunkGroup();

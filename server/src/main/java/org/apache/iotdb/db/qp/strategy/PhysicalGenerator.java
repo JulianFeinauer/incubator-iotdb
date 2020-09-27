@@ -156,6 +156,12 @@ public class PhysicalGenerator {
             }
           }
         }
+        // This is the branch for complex types
+        if (createOperator.getDataType() == TSDataType.UDT) {
+          return new CreateTimeSeriesPlan(createOperator.getPath(), TSDataType.UDT, createOperator.getUserDefinedType(),
+              createOperator.getEncoding(), createOperator.getCompressor(), createOperator.getProps(),
+              createOperator.getTags(), createOperator.getAttributes(), createOperator.getAlias());  
+        }
         return new CreateTimeSeriesPlan(createOperator.getPath(), createOperator.getDataType(),
             createOperator.getEncoding(), createOperator.getCompressor(), createOperator.getProps(),
             createOperator.getTags(), createOperator.getAttributes(), createOperator.getAlias());

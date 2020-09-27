@@ -151,7 +151,7 @@ public class MergeUpgradeTest {
     for (long i = timeOffset; i < timeOffset + ptNum; i++) {
       TSRecord record = new TSRecord(i, deviceName);
       for (int k = 0; k < timeseriesNum; k++) {
-        record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
+        record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getPhysicalType(),
             measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
       }
       fileWriter.write(record);

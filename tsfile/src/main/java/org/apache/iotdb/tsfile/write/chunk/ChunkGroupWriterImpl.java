@@ -79,7 +79,7 @@ public class ChunkGroupWriterImpl implements IChunkGroupWriter {
     List<MeasurementSchema> timeseries = tablet.getSchemas();
     for (int i = 0; i < timeseries.size(); i++) {
       String measurementId = timeseries.get(i).getMeasurementId();
-      TSDataType dataType = timeseries.get(i).getType();
+      TSDataType dataType = timeseries.get(i).getPhysicalType();
       if (!chunkWriters.containsKey(measurementId)) {
         throw new NoMeasurementException("measurement id" + measurementId + " not found!");
       }

@@ -36,7 +36,7 @@ public class PrimitiveMemTable extends AbstractMemTable {
 
   @Override
   protected IWritableMemChunk genMemSeries(MeasurementSchema schema) {
-    return new WritableMemChunk(schema, TVListAllocator.getInstance().allocate(schema.getType()));
+    return new WritableMemChunk(schema, TVListAllocator.getInstance().allocate(schema.getPhysicalType()));
   }
 
   @Override

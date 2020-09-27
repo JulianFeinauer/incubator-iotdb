@@ -1291,7 +1291,7 @@ public class StorageGroupProcessor {
           tsfileResourcesForQuery.add(tsFileResource);
         } else {
           tsFileResource.getUnsealedFileProcessor()
-              .query(deviceId.getFullPath(), measurementId, schema.getType(),
+              .query(deviceId.getFullPath(), measurementId, schema.getPhysicalType(),
                   schema.getEncodingType(),
                   schema.getProps(), context, tsfileResourcesForQuery);
         }

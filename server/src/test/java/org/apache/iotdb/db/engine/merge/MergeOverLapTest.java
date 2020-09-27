@@ -121,7 +121,7 @@ public class MergeOverLapTest extends MergeTest {
       for (int j = 0; j < deviceNum; j++) {
         TSRecord record = new TSRecord(i, deviceIds[j]);
         for (int k = 0; k < measurementNum; k++) {
-          record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
+          record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getPhysicalType(),
               measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
         }
         fileWriter.write(record);
@@ -133,7 +133,7 @@ public class MergeOverLapTest extends MergeTest {
         for (int j = 0; j < deviceNum; j++) {
           TSRecord record = new TSRecord(i, deviceIds[j]);
           for (int k = 0; k < measurementNum; k++) {
-            record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
+            record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getPhysicalType(),
                 measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
           }
           fileWriter.write(record);
@@ -161,7 +161,7 @@ public class MergeOverLapTest extends MergeTest {
     PartialPath path = new PartialPath(deviceIds[0] + TsFileConstant.PATH_SEPARATOR + measurementSchemas[0].getMeasurementId());
     List<TsFileResource> resources = new ArrayList<>();
     resources.add(seqResources.get(0));
-    IBatchReader tsFilesReader = new SeriesRawDataBatchReader(path, measurementSchemas[0].getType(), context,
+    IBatchReader tsFilesReader = new SeriesRawDataBatchReader(path, measurementSchemas[0].getPhysicalType(), context,
         resources, new ArrayList<>(), null, null, true);
     int cnt = 0;
     try {

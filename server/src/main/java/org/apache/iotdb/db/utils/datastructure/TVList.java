@@ -329,7 +329,6 @@ public abstract class TVList {
   public static TVList newList(TSDataType dataType) {
     switch (dataType) {
       case TEXT:
-      case JSON:
         return new BinaryTVList();
       case FLOAT:
         return new FloatTVList();

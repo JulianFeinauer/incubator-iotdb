@@ -18,38 +18,9 @@
  */
 package org.apache.iotdb.db.metadata;
 
-import static java.util.stream.Collectors.toList;
-import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_SEPARATOR;
-import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_WILDCARD;
-import static org.apache.iotdb.db.query.executor.LastQueryExecutor.calculateLastPairForOneSeriesLocally;
-
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import org.apache.iotdb.db.conf.IoTDBConfig;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
@@ -76,6 +47,36 @@ import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
+import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_SEPARATOR;
+import static org.apache.iotdb.db.conf.IoTDBConstant.PATH_WILDCARD;
+import static org.apache.iotdb.db.query.executor.LastQueryExecutor.calculateLastPairForOneSeriesLocally;
+
 /**
  * The hierarchical struct of the Metadata Tree is implemented in this class.
  */
@@ -101,9 +102,9 @@ public class MTree implements Serializable {
   /**
    * Create a timeseries with a full path from root to leaf node Before creating a timeseries, the
    * storage group should be set first, throw exception otherwise
-   *
-   * @param path       timeseries path
+   *  @param path       timeseries path
    * @param dataType   data type
+   * @param logicalType
    * @param encoding   encoding
    * @param compressor compressor
    * @param props      props
@@ -112,7 +113,7 @@ public class MTree implements Serializable {
   MeasurementMNode createTimeseries(
       PartialPath path,
       TSDataType dataType,
-      TSEncoding encoding,
+      String logicalType, TSEncoding encoding,
       CompressionType compressor,
       Map<String, String> props,
       String alias)
@@ -870,7 +871,7 @@ public class MTree implements Serializable {
       tsRow[0] = ((MeasurementMNode) node).getAlias();
       MeasurementSchema measurementSchema = ((MeasurementMNode) node).getSchema();
       tsRow[1] = getStorageGroupPath(nodePath).getFullPath();
-      tsRow[2] = measurementSchema.getType().toString();
+      tsRow[2] = measurementSchema.getPhysicalType().toString();
       tsRow[3] = measurementSchema.getEncodingType().toString();
       tsRow[4] = measurementSchema.getCompressor().toString();
       tsRow[5] = String.valueOf(((MeasurementMNode) node).getOffset());
@@ -911,7 +912,7 @@ public class MTree implements Serializable {
     } else {
       try {
         last = calculateLastPairForOneSeriesLocally(node.getPartialPath(),
-            node.getSchema().getType(), queryContext, Collections.emptySet());
+            node.getSchema().getPhysicalType(), queryContext, Collections.emptySet());
         return last.getTimestamp();
       } catch (Exception e) {
         logger.error("Something wrong happened while trying to get last time value pair of {}",
@@ -1158,7 +1159,7 @@ public class MTree implements Serializable {
       }
     } else if (node instanceof MeasurementMNode) {
       MeasurementMNode leafMNode = (MeasurementMNode) node;
-      jsonObject.put("DataType", leafMNode.getSchema().getType());
+      jsonObject.put("DataType", leafMNode.getSchema().getPhysicalType());
       jsonObject.put("Encoding", leafMNode.getSchema().getEncodingType());
       jsonObject.put("Compressor", leafMNode.getSchema().getCompressor());
       if (leafMNode.getSchema().getProps() != null) {

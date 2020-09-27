@@ -68,7 +68,6 @@ public abstract class Statistics<T> {
       case INT64:
         return new LongStatistics();
       case TEXT:
-      case JSON:
         return new BinaryStatistics();
       case BOOLEAN:
         return new BooleanStatistics();

@@ -18,16 +18,6 @@
  */
 package org.apache.iotdb.db.qp.physical.crud;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONValidator;
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
@@ -49,6 +39,14 @@ import org.apache.iotdb.tsfile.write.record.TSRecord;
 import org.apache.iotdb.tsfile.write.schema.MeasurementSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class InsertRowPlan extends InsertPlan {
 
@@ -165,7 +163,12 @@ public class InsertRowPlan extends InsertPlan {
           }
           continue;
         }
-        dataTypes[i] = measurementMNodes[i].getSchema().getType();
+        // TODO JF: what does this do?
+        if (dataTypes[i] == null) {
+          dataTypes[i] = measurementMNodes[i].getSchema().getPhysicalType();
+        } else {
+          measurementMNodes[i] = new MeasurementMNode(null, "", new MeasurementSchema("", dataTypes[i], TSEncoding.PLAIN), "");
+        }
         try {
           values[i] = CommonUtils.parseValue(dataTypes[i], values[i].toString());
         } catch (Exception e) {
@@ -177,20 +180,6 @@ public class InsertRowPlan extends InsertPlan {
           } else {
             throw e;
           }
-        }
-      }
-    }
-    validate();
-  }
-
-  private void validate() {
-    for (int i = 0; i < measurementMNodes.length; i++) {
-      if (dataTypes[i] == TSDataType.JSON) {
-        // Check if json
-        final JSONValidator validator = JSONValidator.from(values[i].toString());
-        final boolean isValid = validator.validate();
-        if (!isValid) {
-          throw new RuntimeException("The given String '" + values[i] + "' is no valid JSON String!");
         }
       }
     }
@@ -294,7 +283,6 @@ public class InsertRowPlan extends InsertPlan {
           ReadWriteIOUtils.write((Double) values[i], outputStream);
           break;
         case TEXT:
-        case JSON:
           ReadWriteIOUtils.write((Binary) values[i], outputStream);
           break;
         default:
@@ -331,7 +319,6 @@ public class InsertRowPlan extends InsertPlan {
           ReadWriteIOUtils.write((Double) values[i], buffer);
           break;
         case TEXT:
-        case JSON:
           ReadWriteIOUtils.write((Binary) values[i], buffer);
           break;
         default:
@@ -371,7 +358,6 @@ public class InsertRowPlan extends InsertPlan {
           values[i] = ReadWriteIOUtils.readDouble(buffer);
           break;
         case TEXT:
-        case JSON:
           values[i] = ReadWriteIOUtils.readBinary(buffer);
           break;
         default:
@@ -441,6 +427,6 @@ public class InsertRowPlan extends InsertPlan {
     }
     Object value = values[measurementIndex];
     return new TimeValuePair(time,
-        TsPrimitiveType.getByType(measurementMNodes[measurementIndex].getSchema().getType(), value));
+        TsPrimitiveType.getByType(measurementMNodes[measurementIndex].getSchema().getPhysicalType(), value));
   }
 }

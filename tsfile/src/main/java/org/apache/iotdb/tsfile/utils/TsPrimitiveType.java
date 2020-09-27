@@ -43,7 +43,6 @@ public abstract class TsPrimitiveType implements Serializable {
       case DOUBLE:
         return new TsPrimitiveType.TsDouble((double) v);
       case TEXT:
-      case JSON:
         return new TsPrimitiveType.TsBinary((Binary) v);
       default:
         throw new UnSupportedDataTypeException("Unsupported data type:" + dataType);

@@ -155,7 +155,6 @@ public class MemTableFlushTask {
             seriesWriterImpl.write(time, tvPairs.getDouble(i));
             break;
           case TEXT:
-          case JSON:
             seriesWriterImpl.write(time, tvPairs.getBinary(i));
             break;
           default:
@@ -197,7 +196,7 @@ public class MemTableFlushTask {
             long starTime = System.currentTimeMillis();
             Pair<TVList, MeasurementSchema> encodingMessage = (Pair<TVList, MeasurementSchema>) task;
             IChunkWriter seriesWriter = new ChunkWriterImpl(encodingMessage.right);
-            writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right.getType());
+            writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right.getPhysicalType());
             ioTaskQueue.add(seriesWriter);
             memSerializeTime += System.currentTimeMillis() - starTime;
           }

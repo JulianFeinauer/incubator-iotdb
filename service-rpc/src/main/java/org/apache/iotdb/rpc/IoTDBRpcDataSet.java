@@ -148,7 +148,6 @@ public class IoTDBRpcDataSet {
           values[i] = new byte[Double.BYTES];
           break;
         case TEXT:
-        case JSON:
           values[i] = null;
           break;
         default:
@@ -239,7 +238,6 @@ public class IoTDBRpcDataSet {
             valueBuffer.get(values[i]);
             break;
           case TEXT:
-          case JSON:
             int length = valueBuffer.getInt();
             values[i] = ReadWriteIOUtils.readBytes(valueBuffer, length);
             break;
@@ -404,7 +402,6 @@ public class IoTDBRpcDataSet {
       case DOUBLE:
         return String.valueOf(BytesUtils.bytesToDouble(values[index]));
       case TEXT:
-      case JSON:
         return new String(values[index]);
       default:
         throw new StatementExecutionException("Unknown DataType " + tsDataType);

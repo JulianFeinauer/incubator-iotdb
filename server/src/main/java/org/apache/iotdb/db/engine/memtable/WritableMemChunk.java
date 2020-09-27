@@ -36,7 +36,7 @@ public class WritableMemChunk implements IWritableMemChunk {
 
   @Override
   public void write(long insertTime, Object objectValue) {
-    switch (schema.getType()) {
+    switch (schema.getPhysicalType()) {
       case BOOLEAN:
         putBoolean(insertTime, (boolean) objectValue);
         break;
@@ -53,11 +53,10 @@ public class WritableMemChunk implements IWritableMemChunk {
         putDouble(insertTime, (double) objectValue);
         break;
       case TEXT:
-      case JSON:
         putBinary(insertTime, (Binary) objectValue);
         break;
       default:
-        throw new UnSupportedDataTypeException("Unsupported data type:" + schema.getType());
+        throw new UnSupportedDataTypeException("Unsupported data type:" + schema.getPhysicalType());
     }
   }
 
@@ -85,7 +84,6 @@ public class WritableMemChunk implements IWritableMemChunk {
         putDoubles(times, doubleValues, start, end);
         break;
       case TEXT:
-      case JSON:
         Binary[] binaryValues = (Binary[]) valueList;
         putBinaries(times, binaryValues, start, end);
         break;
@@ -221,7 +219,7 @@ public class WritableMemChunk implements IWritableMemChunk {
     int size = getSortedTVList().size();
     StringBuilder out = new StringBuilder("MemChunk Size: " + size + System.lineSeparator());
     if (size != 0) {
-      out.append("Data type:").append(schema.getType()).append(System.lineSeparator());
+      out.append("Data type:").append(schema.getPhysicalType()).append(System.lineSeparator());
       out.append("First point:").append(getSortedTVList().getTimeValuePair(0))
           .append(System.lineSeparator());
       out.append("Last point:").append(getSortedTVList().getTimeValuePair(size - 1))

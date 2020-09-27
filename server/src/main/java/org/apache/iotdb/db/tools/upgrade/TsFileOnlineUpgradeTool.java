@@ -430,7 +430,7 @@ public class TsFileOnlineUpgradeTool implements AutoCloseable {
       List<PageHeader> pageHeadersInChunk = pageHeadersInChunkGroup.get(i);
       List<Boolean> pagePartitionInfo = pagePartitionInfoInChunkGroup.get(i);
       valueDecoder = Decoder
-          .getDecoderByType(schema.getEncodingType(), schema.getType());
+          .getDecoderByType(schema.getEncodingType(), schema.getPhysicalType());
       for (int j = 0; j < pageDataInChunk.size(); j++) {
         if (Boolean.TRUE.equals(pagePartitionInfo.get(j))) {
           writePageInSamePartitionToFile(oldTsFile, schema, pageHeadersInChunk.get(j),
@@ -501,7 +501,7 @@ public class TsFileOnlineUpgradeTool implements AutoCloseable {
       Map<Long, Map<MeasurementSchema, ChunkWriterImpl>> chunkWritersInChunkGroup)
       throws IOException {
     valueDecoder.reset();
-    PageReader pageReader = new PageReader(pageData, schema.getType(), valueDecoder,
+    PageReader pageReader = new PageReader(pageData, schema.getPhysicalType(), valueDecoder,
         defaultTimeDecoder, null);
     BatchData batchData = pageReader.getAllSatisfiedPageData();
     while (batchData.hasCurrent()) {
@@ -514,7 +514,7 @@ public class TsFileOnlineUpgradeTool implements AutoCloseable {
       ChunkWriterImpl chunkWriter = chunkWriters
           .getOrDefault(schema, new ChunkWriterImpl(schema));
       getOrDefaultTsFileIOWriter(oldTsFile, partitionId);
-      switch (schema.getType()) {
+      switch (schema.getPhysicalType()) {
         case INT32:
           chunkWriter.write(time, (int) value);
           break;
@@ -535,7 +535,7 @@ public class TsFileOnlineUpgradeTool implements AutoCloseable {
           break;
         default:
           throw new UnSupportedDataTypeException(
-              String.format("Data type %s is not supported.", schema.getType()));
+              String.format("Data type %s is not supported.", schema.getPhysicalType()));
       }
       batchData.next();
       chunkWriters.put(schema, chunkWriter);

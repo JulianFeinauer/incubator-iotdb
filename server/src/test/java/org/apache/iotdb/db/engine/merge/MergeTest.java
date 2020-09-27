@@ -110,7 +110,7 @@ abstract class MergeTest {
         PartialPath devicePath = new PartialPath(device);
         IoTDB.metaManager.createTimeseries(
             devicePath.concatNode(measurementSchema.getMeasurementId()), measurementSchema
-                .getType(), measurementSchema.getEncodingType(), measurementSchema.getCompressor(),
+                .getPhysicalType(), measurementSchema.getEncodingType(), measurementSchema.getCompressor(),
             Collections.emptyMap());
       }
     }
@@ -179,7 +179,7 @@ abstract class MergeTest {
       for (int j = 0; j < deviceNum; j++) {
         TSRecord record = new TSRecord(i, deviceIds[j]);
         for (int k = 0; k < measurementNum; k++) {
-          record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getType(),
+          record.addTuple(DataPoint.getDataPoint(measurementSchemas[k].getPhysicalType(),
               measurementSchemas[k].getMeasurementId(), String.valueOf(i + valueOffset)));
         }
         fileWriter.write(record);
