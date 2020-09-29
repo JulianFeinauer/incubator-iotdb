@@ -183,4 +183,47 @@ public class IoTDBJsonIT {
     }
   }
 
+  @Test
+  public void testGps() throws ClassNotFoundException {
+    Class.forName(Config.JDBC_DRIVER_NAME);
+    try (Connection connection = DriverManager
+        .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
+         Statement statement = connection.createStatement()) {
+
+      // Create timeseries
+      statement.execute("CREATE TIMESERIES root.sg.d4.gps WITH DATATYPE=GPS, ENCODING=PLAIN");
+
+      // Show timeseries
+      statement.execute("SHOW TIMESERIES");
+      ResultSet rs = statement.getResultSet();
+
+      StringBuilder sb = new StringBuilder();
+      while (rs.next()) {
+        sb.append(rs.getString(1) + "- " + rs.getString(2) + " - " + rs.getString(3) + " - "+ rs.getString(4));
+      }
+      String result = sb.toString();
+      assertTrue(result.contains("root.sg.d4.gps.lat- null - root.sg - DOUBLE"));
+      assertTrue(result.contains("root.sg.d4.gps.lon- null - root.sg - DOUBLE"));
+
+      // Insert
+      statement.execute("INSERT INTO root.sg.d4(timestamp,gps) values(1, '{\"lat\":1, \"lon\":1}')");
+
+      statement.execute("select * from root.sg.d4");
+
+      rs = statement.getResultSet();
+
+      sb = new StringBuilder();
+      while (rs.next()) {
+        sb.append(rs.getString(1) + "- " + rs.getString(2) + " - " + rs.getString(3));
+      }
+      result = sb.toString();
+
+      assertTrue(result.contains("1- 1.0 - 1.0"));
+
+    } catch (Exception e) {
+      e.printStackTrace();
+      fail(e.getMessage());
+    }
+  }
+
 }

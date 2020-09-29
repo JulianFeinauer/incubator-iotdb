@@ -921,7 +921,7 @@ public class PlanExecutor implements IPlanExecutor {
   @Override
   public void insert(InsertRowPlan insertRowPlan) throws QueryProcessException {
     // TODO If we want to go from UDT Insert into Physical Insert do it here
-    InsertRowPlan physicalPlan = TypeManager.getInstance().makePhysicalPlan(insertRowPlan);
+    InsertRowPlan physicalPlan = TypeManager.getInstance().makePhysicalPlans(insertRowPlan);
 
     MNode deviceNode = null;
     try {

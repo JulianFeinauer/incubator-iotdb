@@ -5,6 +5,9 @@
 package org.apache.iotdb.db.engine.udt;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
+import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.qp.physical.PhysicalPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 
 import java.util.List;
@@ -19,14 +22,32 @@ public interface MeasurementConverter {
 
     public static class Converted {
 
+        private final PartialPath pathAppendix;
         private final List<String> measurements;
         private final List<Object> objects;
         private final List<TSDataType> dataTypes;
 
         public Converted(List<String> measurements, List<Object> objects, List<TSDataType> dataTypes) {
+            this(getEmptyPath(), measurements, objects, dataTypes);
+        }
+
+        private static PartialPath getEmptyPath() {
+            try {
+                return new PartialPath("");
+            } catch (IllegalPathException e) {
+                throw new IllegalStateException("This should never happen!", e);
+            }
+        }
+
+        public Converted(PartialPath pathAppendix, List<String> measurements, List<Object> objects, List<TSDataType> dataTypes) {
+            this.pathAppendix = pathAppendix;
             this.measurements = measurements;
             this.objects = objects;
             this.dataTypes = dataTypes;
+        }
+
+        public PartialPath getPathAppendix() {
+            return pathAppendix;
         }
 
         public List<String> getMeasurements() {

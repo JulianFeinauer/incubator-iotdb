@@ -5,6 +5,7 @@
 package org.apache.iotdb.db.engine.udt;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.iotdb.db.qp.physical.sys.CreateTimeSeriesPlan;
 import org.apache.iotdb.tsfile.file.metadata.enums.CompressionType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSEncoding;
@@ -23,10 +24,12 @@ public class UserDefinedType {
     private final TSEncoding encoding;
     private final CompressionType compressor;
     private final Predicate<Object> validator;
+    private final Function<CreateTimeSeriesPlan, List<CreateTimeSeriesPlan>> planTransformer;
     private final MeasurementConverter transformer;
 
     public UserDefinedType(String name, boolean simple, TSDataType physicalType, TSEncoding encoding,
                            CompressionType compressor, Predicate<Object> validator,
+                           Function<CreateTimeSeriesPlan, List<CreateTimeSeriesPlan>> planTransformer,
                            MeasurementConverter transformer) {
         this.name = name;
         this.simple = simple;
@@ -34,6 +37,7 @@ public class UserDefinedType {
         this.encoding = encoding;
         this.compressor = compressor;
         this.validator = validator;
+        this.planTransformer = planTransformer;
         this.transformer = transformer;
     }
 
@@ -63,6 +67,10 @@ public class UserDefinedType {
 
     public MeasurementConverter.Converted transformToPhysical(String measurement, Object value) {
         return transformer.apply(measurement, value);
+    }
+
+    public List<CreateTimeSeriesPlan> transformCreatePlan(CreateTimeSeriesPlan plan) {
+        return planTransformer.apply(plan);
     }
 
     @Override

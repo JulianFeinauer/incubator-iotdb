@@ -4,8 +4,6 @@
 
 package org.apache.iotdb.db.engine.udt;
 
-import org.apache.commons.lang3.NotImplementedException;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.physical.crud.InsertRowPlan;
@@ -15,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,8 +25,9 @@ public class TypeManager {
     private final Map<String, UserDefinedType> typeRepository = new HashMap<>();
 
     {
-        typeRepository.put("JSON", BuiltInTypes.JSON_TYPE);
+        typeRepository.put("JSON", BuiltInTypes.JSON);
         typeRepository.put("EVEN_NUMBER", BuiltInTypes.EVEN_NUMBER);
+        typeRepository.put("GPS", BuiltInTypes.GPS);
     }
 
     private final Map<PartialPath, UserDefinedType> assignedTypes = new HashMap<>();
@@ -51,7 +51,7 @@ public class TypeManager {
     private TypeManager() {
     }
 
-    public CreateTimeSeriesPlan makePhysicalPlan(CreateTimeSeriesPlan plan) {
+    public List<CreateTimeSeriesPlan> makePhysicalPlans(CreateTimeSeriesPlan plan) {
         System.out.println("Checking Create PLAN " + plan.toString());
 
         if (plan.getLogicalType() != null) {
@@ -64,23 +64,33 @@ public class TypeManager {
             }
             // Store it, and map it to the respective physical type
             final UserDefinedType type = typeRepository.get(plan.getLogicalType());
-            if (type.isSimple()) {
-                final TSDataType physicalType = type.getPhysicalType();
-                // Store that we mapped the path to this type
-                System.out.println("Store path " + plan.getPath().toString() + " as type " + type.getName());
-                assignedTypes.put(plan.getPath(), type);
-                return new CreateTimeSeriesPlan(plan.getPath(), physicalType, type.getEncoding(), type.getCompressor(), plan.getProps(), plan.getTags(), plan.getAttributes(), plan.getAlias());
-            } else {
-                throw new NotImplementedException("Only simple types are implemented now!");
-            }
+            List<CreateTimeSeriesPlan> plans = type.transformCreatePlan(plan);
+            assignedTypes.put(plan.getPath(), type);
+            return plans;
+
+//            if (type.isSimple()) {
+//                final TSDataType physicalType = type.getPhysicalType();
+//                // Store that we mapped the path to this type
+//                System.out.println("Store path " + plan.getPath().toString() + " as type " + type.getName());
+//                return new CreateTimeSeriesPlan(plan.getPath(), physicalType, type.getEncoding(), type.getCompressor(), plan.getProps(), plan.getTags(), plan.getAttributes(), plan.getAlias());
+//            } else {
+//                throw new NotImplementedException("Only simple types are implemented now!");
+//            }
+        } else {
+            return Collections.singletonList(plan);
         }
 
-        return plan;
     }
 
-    public InsertRowPlan makePhysicalPlan(InsertRowPlan logicalPlan) {
+    public InsertRowPlan makePhysicalPlans(InsertRowPlan logicalPlan) {
         System.out.println("Checking Insert PLAN " + logicalPlan.toString());
 
+        PartialPath appendix;
+        try {
+            appendix = new PartialPath("");
+        } catch (IllegalPathException e) {
+            throw new RuntimeException("This should never happen", e);
+        }
         List<String> measurements = new ArrayList<>();
         List<TSDataType> dataTypes = new ArrayList<>();
         List<Object> insertValues = new ArrayList<>();
@@ -112,6 +122,7 @@ public class TypeManager {
                     final MeasurementConverter.Converted transformed = type.transformToPhysical(measurement, value);
 
                     // Add them to the lists
+                    appendix = transformed.getPathAppendix();
                     measurements.addAll(transformed.getMeasurements());
                     insertValues.addAll(transformed.getObjects());
                     dataTypes.addAll(transformed.getDataTypes());
@@ -126,7 +137,8 @@ public class TypeManager {
             }
         }
 
-        final InsertRowPlan insertRowPlan = new InsertRowPlan(logicalPlan.getDeviceId(), logicalPlan.getTime(), measurements.toArray(new String[0]), measurements.toArray(new String[0]));
+        final InsertRowPlan insertRowPlan;
+        insertRowPlan = new InsertRowPlan(logicalPlan.getDeviceId().concatPath(appendix), logicalPlan.getTime(), measurements.toArray(new String[0]), measurements.toArray(new String[0]));
         insertRowPlan.setValues(insertValues.toArray(new Object[0]));
         insertRowPlan.setDataTypes(dataTypes.toArray(new TSDataType[0]));
         // insertRowPlan.setNeedInferType(false);
