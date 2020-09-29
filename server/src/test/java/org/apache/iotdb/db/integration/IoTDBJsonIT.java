@@ -41,7 +41,7 @@ public class IoTDBJsonIT {
   private static String[] sqls = new String[]{
       "SET STORAGE GROUP TO root.sg",
 
-      "CREATE TIMESERIES root.sg.d1(speed) WITH DATATYPE=JSON, ENCODING=PLAIN",
+      "CREATE TIMESERIES root.sg.d1.speed WITH DATATYPE=JSON, ENCODING=PLAIN",
   };
 
   private static final String TIMESTAMP_STR = "Time";
@@ -121,7 +121,7 @@ public class IoTDBJsonIT {
          Statement statement = connection.createStatement()) {
 
       // Create timeseries
-      statement.execute("CREATE TIMESERIES root.sg.d2(even) WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
+      statement.execute("CREATE TIMESERIES root.sg.d2.even WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
 
       // Show timeseries
       statement.execute("SHOW TIMESERIES");
@@ -129,7 +129,7 @@ public class IoTDBJsonIT {
 
       // Ensure that its stored as INT32
       while (rs.next()) {
-        if (rs.getString(2).equals("even")) {
+        if ("even".equals(rs.getString(2))) {
           assertEquals("INT32", rs.getString(4));
         }
       }
@@ -164,7 +164,7 @@ public class IoTDBJsonIT {
          Statement statement = connection.createStatement()) {
 
       // Create timeseries
-      statement.execute("CREATE TIMESERIES root.sg.d3(even) WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
+      statement.execute("CREATE TIMESERIES root.sg.d3.even WITH DATATYPE=EVEN_NUMBER, ENCODING=PLAIN");
 
       // Show timeseries
       statement.execute("SHOW TIMESERIES");

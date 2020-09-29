@@ -67,14 +67,8 @@ public class TypeManager {
             if (type.isSimple()) {
                 final TSDataType physicalType = type.getPhysicalType();
                 // Store that we mapped the path to this type
-                final PartialPath path;
-                try {
-                    path = plan.getPath().concatPath(new PartialPath(plan.getAlias()));
-                } catch (IllegalPathException e) {
-                    throw new TypeManagerException("Unable to concat Path", e);
-                }
-                System.out.println("Store path " + path.toString() + " as type " + type.getName());
-                assignedTypes.put(path, type);
+                System.out.println("Store path " + plan.getPath().toString() + " as type " + type.getName());
+                assignedTypes.put(plan.getPath(), type);
                 return new CreateTimeSeriesPlan(plan.getPath(), physicalType, type.getEncoding(), type.getCompressor(), plan.getProps(), plan.getTags(), plan.getAttributes(), plan.getAlias());
             } else {
                 throw new NotImplementedException("Only simple types are implemented now!");
