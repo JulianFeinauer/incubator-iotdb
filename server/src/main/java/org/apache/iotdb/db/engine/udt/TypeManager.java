@@ -25,7 +25,7 @@ public class TypeManager {
     private final Map<String, UserDefinedType> typeRepository = new HashMap<>();
 
     {
-        typeRepository.put("JSON", BuiltInTypes.JSON);
+        typeRepository.put("JSONS", BuiltInTypes.JSONS);
         typeRepository.put("EVEN_NUMBER", BuiltInTypes.EVEN_NUMBER);
         typeRepository.put("GPS", BuiltInTypes.GPS);
     }

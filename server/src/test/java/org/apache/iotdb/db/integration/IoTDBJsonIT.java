@@ -29,6 +29,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 import static org.junit.Assert.assertEquals;
@@ -39,9 +40,7 @@ import static org.junit.Assert.fail;
 public class IoTDBJsonIT {
 
   private static String[] sqls = new String[]{
-      "SET STORAGE GROUP TO root.sg",
-
-      "CREATE TIMESERIES root.sg.d1.speed WITH DATATYPE=JSON, ENCODING=PLAIN",
+      "SET STORAGE GROUP TO root.sg"
   };
 
   private static final String TIMESTAMP_STR = "Time";
@@ -83,13 +82,12 @@ public class IoTDBJsonIT {
         .getConnection(Config.IOTDB_URL_PREFIX + "127.0.0.1:6667/", "root", "root");
         Statement statement = connection.createStatement()) {
 
-      // Show timeseries
-      statement.execute("SHOW TIMESERIES");
-      final ResultSet rs = statement.getResultSet();
+      // Create ts
+      statement.execute("CREATE TIMESERIES root.sg.d1.speed WITH DATATYPE=JSONS, ENCODING=PLAIN");
 
-      // Ensure that its stored as TEXT
-      assertTrue(rs.next());
-      assertEquals("TEXT", rs.getString(4));
+      // Show timeseries
+      String result = getShowTimeseries(statement);
+      assertTrue(result.contains("root.sg.d1.speed- null - root.sg - TEXT"));
 
       // Insert
       final boolean hasResult = statement.execute("INSERT INTO root.sg.d1(timestamp,speed) values(1, '{\"key\": 1}')");
@@ -194,14 +192,7 @@ public class IoTDBJsonIT {
       statement.execute("CREATE TIMESERIES root.sg.d4.gps WITH DATATYPE=GPS, ENCODING=PLAIN");
 
       // Show timeseries
-      statement.execute("SHOW TIMESERIES");
-      ResultSet rs = statement.getResultSet();
-
-      StringBuilder sb = new StringBuilder();
-      while (rs.next()) {
-        sb.append(rs.getString(1) + "- " + rs.getString(2) + " - " + rs.getString(3) + " - "+ rs.getString(4));
-      }
-      String result = sb.toString();
+      String result = getShowTimeseries(statement);
       assertTrue(result.contains("root.sg.d4.gps.lat- null - root.sg - DOUBLE"));
       assertTrue(result.contains("root.sg.d4.gps.lon- null - root.sg - DOUBLE"));
 
@@ -210,9 +201,9 @@ public class IoTDBJsonIT {
 
       statement.execute("select * from root.sg.d4");
 
-      rs = statement.getResultSet();
+      ResultSet rs = statement.getResultSet();
 
-      sb = new StringBuilder();
+      StringBuilder sb = new StringBuilder();
       while (rs.next()) {
         sb.append(rs.getString(1) + "- " + rs.getString(2) + " - " + rs.getString(3));
       }
@@ -224,6 +215,17 @@ public class IoTDBJsonIT {
       e.printStackTrace();
       fail(e.getMessage());
     }
+  }
+
+  private static String getShowTimeseries(Statement statement) throws SQLException {
+    statement.execute("SHOW TIMESERIES");
+    ResultSet rs = statement.getResultSet();
+
+    StringBuilder sb = new StringBuilder();
+    while (rs.next()) {
+      sb.append(rs.getString(1) + "- " + rs.getString(2) + " - " + rs.getString(3) + " - "+ rs.getString(4));
+    }
+    return sb.toString();
   }
 
 }
