@@ -206,7 +206,18 @@ public class InsertRowPlan extends InsertPlan {
   }
 
   public void setValues(Object[] values) {
-    this.values = values;
+    this.values = new Object[values.length];
+    for (int i = 0; i < values.length; i++) {
+      if (dataTypes[i] != null) {
+        try {
+          this.values[i] = CommonUtils.parseValue(this.dataTypes[i], values[i].toString());
+        } catch (QueryProcessException e) {
+          throw new RuntimeException("Unable to parse value", e);
+        }
+      } else {
+        this.values[i] = values[i];
+      }
+    }
   }
 
   @Override

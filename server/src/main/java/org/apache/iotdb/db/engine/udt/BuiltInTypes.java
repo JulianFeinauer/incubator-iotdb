@@ -24,7 +24,6 @@ public class BuiltInTypes {
         TSDataType.TEXT, TSEncoding.PLAIN, CompressionType.SNAPPY,
         o -> JSONValidator.from(o.toString()).validate(),
         plan -> {
-            // Store that we mapped the path to this type
             return Collections.singletonList(
                 new CreateTimeSeriesPlan(plan.getPath(), TSDataType.TEXT, TSEncoding.PLAIN, CompressionType.SNAPPY, plan.getProps(), plan.getTags(), plan.getAttributes(), plan.getAlias())
             );
@@ -36,7 +35,6 @@ public class BuiltInTypes {
         TSDataType.TEXT, TSEncoding.PLAIN, CompressionType.SNAPPY,
         o -> JSONValidator.from(o.toString()).validate(),
         plan -> {
-            // Store that we mapped the path to this type
             return Collections.singletonList(
                 new CreateTimeSeriesPlan(plan.getPath(), TSDataType.TEXT, TSEncoding.PLAIN, CompressionType.SNAPPY, plan.getProps(), plan.getTags(), plan.getAttributes(), plan.getAlias())
             );

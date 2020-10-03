@@ -52,7 +52,7 @@ public class TypeManager {
     }
 
     public List<CreateTimeSeriesPlan> makePhysicalPlans(CreateTimeSeriesPlan plan) {
-        System.out.println("Checking Create PLAN " + plan.toString());
+        logger.debug("Checking Create PLAN {}", plan.toString());
 
         if (plan.getLogicalType() != null) {
             if (plan.getDataType() != TSDataType.UDT) {
@@ -83,7 +83,7 @@ public class TypeManager {
     }
 
     public InsertRowPlan makePhysicalPlans(InsertRowPlan logicalPlan) {
-        System.out.println("Checking Insert PLAN " + logicalPlan.toString());
+        logger.debug("Checking Insert PLAN {}", logicalPlan.toString());
 
         PartialPath appendix;
         try {
@@ -99,16 +99,16 @@ public class TypeManager {
             final String measurement = logicalPlan.getMeasurements()[i];
             final TSDataType dataType = logicalPlan.getDataTypes()[i];
 
-            System.out.println("Checking measurement " + measurement + " with type " + dataType);
+            logger.debug("Checking measurement {} with type {}", measurement, dataType);
 
             try {
                 final PartialPath path = logicalPlan.getDeviceId().concatPath(new PartialPath(measurement));
 
-                System.out.println("Checking path " + path.toString());
+                logger.debug("Checking path {}", path.toString());
 
                 if (assignedTypes.containsKey(path)) {
                     //
-                    System.out.println("We have a complex type here: " + path.toString());
+                    logger.debug("Complex type found at path {}", path.toString());
                     final UserDefinedType type = assignedTypes.get(path);
 
                     final Object value = logicalPlan.getValues()[i];
@@ -130,7 +130,7 @@ public class TypeManager {
                     // Simply take the values we already had
                     measurements.add(measurement);
                     insertValues.add(logicalPlan.getValues()[i].toString());
-                    dataTypes.add(null);
+                    dataTypes.add(dataType);
                 }
             } catch (IllegalPathException e) {
                 throw new TypeManagerException("Unable to infer full path", e);
@@ -139,9 +139,9 @@ public class TypeManager {
 
         final InsertRowPlan insertRowPlan;
         insertRowPlan = new InsertRowPlan(logicalPlan.getDeviceId().concatPath(appendix), logicalPlan.getTime(), measurements.toArray(new String[0]), measurements.toArray(new String[0]));
-        insertRowPlan.setValues(insertValues.toArray(new Object[0]));
         insertRowPlan.setDataTypes(dataTypes.toArray(new TSDataType[0]));
-        // insertRowPlan.setNeedInferType(false);
+        insertRowPlan.setValues(insertValues.toArray(new Object[0]));
+        insertRowPlan.setNeedInferType(false);
         return insertRowPlan;
     }
 }
