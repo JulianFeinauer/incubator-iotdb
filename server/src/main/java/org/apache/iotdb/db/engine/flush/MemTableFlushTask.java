@@ -24,9 +24,9 @@ import org.apache.iotdb.db.engine.flush.pool.FlushSubTaskPoolManager;
 import org.apache.iotdb.db.engine.memtable.IMemTable;
 import org.apache.iotdb.db.engine.memtable.IWritableMemChunk;
 import org.apache.iotdb.db.exception.runtime.FlushRunTimeException;
+import org.apache.iotdb.db.index.LuceneIndex;
 import org.apache.iotdb.db.rescon.SystemInfo;
 import org.apache.iotdb.db.utils.datastructure.TVList;
-import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
 import org.apache.iotdb.tsfile.utils.Pair;
 import org.apache.iotdb.tsfile.write.chunk.ChunkWriterImpl;
 import org.apache.iotdb.tsfile.write.chunk.IChunkWriter;
@@ -157,7 +157,7 @@ public class MemTableFlushTask {
   private Runnable encodingTask =
       new Runnable() {
         private void writeOneSeries(
-            TVList tvPairs, IChunkWriter seriesWriterImpl, TSDataType dataType) {
+            TVList tvPairs, IChunkWriter seriesWriterImpl, MeasurementSchema schema) {
           for (int i = 0; i < tvPairs.size(); i++) {
             long time = tvPairs.getTime(i);
 
@@ -171,7 +171,7 @@ public class MemTableFlushTask {
               ((ChunkWriterImpl) seriesWriterImpl).setLastPoint(true);
             }
 
-            switch (dataType) {
+            switch (schema.getType()) {
               case BOOLEAN:
                 seriesWriterImpl.write(time, tvPairs.getBoolean(i));
                 break;
@@ -189,10 +189,16 @@ public class MemTableFlushTask {
                 break;
               case TEXT:
                 seriesWriterImpl.write(time, tvPairs.getBinary(i));
+
+                // TODO Update Index here
+                LuceneIndex.register(schema, time, tvPairs.getBinary(i));
+
                 break;
               default:
                 LOGGER.error(
-                    "Storage group {} does not support data type: {}", storageGroup, dataType);
+                    "Storage group {} does not support data type: {}",
+                    storageGroup,
+                    schema.getType());
                 break;
             }
           }
@@ -236,7 +242,7 @@ public class MemTableFlushTask {
               Pair<TVList, MeasurementSchema> encodingMessage =
                   (Pair<TVList, MeasurementSchema>) task;
               IChunkWriter seriesWriter = new ChunkWriterImpl(encodingMessage.right);
-              writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right.getType());
+              writeOneSeries(encodingMessage.left, seriesWriter, encodingMessage.right);
               seriesWriter.sealCurrentPage();
               seriesWriter.clearPageWriter();
               try {

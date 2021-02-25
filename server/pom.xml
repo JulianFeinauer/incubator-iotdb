@@ -196,6 +196,17 @@
             <artifactId>netty-buffer</artifactId>
             <version>4.1.27.Final</version>
         </dependency>
+        <!-- Lucene -->
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+            <version>8.8.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+            <version>8.8.1</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>
