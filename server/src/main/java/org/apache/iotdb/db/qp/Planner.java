@@ -73,6 +73,9 @@ public class Planner {
       maxDeduplicatedPathNum = Integer.MAX_VALUE - 1;
     }
     operator = logicalOptimize(operator, maxDeduplicatedPathNum);
+
+    // Do the shit here
+
     PhysicalGenerator physicalGenerator = new PhysicalGenerator();
     PhysicalPlan physicalPlan = physicalGenerator.transformToPhysicalPlan(operator, fetchSize);
     physicalPlan.setDebug(operator.isDebug());

@@ -25,4 +25,6 @@ public interface IExpression extends Serializable {
   ExpressionType getType();
 
   IExpression clone();
+
+  <R> R accept(ExpressionVisitor<R> visitor);
 }

@@ -32,6 +32,8 @@ public abstract class QueryPlan extends PhysicalPlan {
   private List<TSDataType> dataTypes = null;
   private boolean alignByTime = true; // for disable align sql
 
+  private Map<PartialPath, PartialPath> realToStorageName = new HashMap<>();
+
   private int rowLimit = 0;
   private int rowOffset = 0;
 
@@ -109,4 +111,13 @@ public abstract class QueryPlan extends PhysicalPlan {
   public void setAscending(boolean ascending) {
     this.ascending = ascending;
   }
+
+  public Map<PartialPath, PartialPath> getRealToStorageName() {
+    return realToStorageName;
+  }
+
+  public void setRealToStorageName(Map<PartialPath, PartialPath> realToStorageName) {
+    this.realToStorageName = realToStorageName;
+  }
+
 }

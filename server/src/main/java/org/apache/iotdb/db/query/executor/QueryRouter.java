@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.apache.iotdb.db.exception.StorageEngineException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
@@ -105,7 +107,11 @@ public class QueryRouter implements IQueryRouter {
     }
 
     IExpression expression = aggregationPlan.getExpression();
-    List<PartialPath> deduplicatedPaths = aggregationPlan.getDeduplicatedPaths();
+
+    // Use the transformed paths here
+    List<PartialPath> deduplicatedPaths = aggregationPlan.getDeduplicatedPaths().stream()
+        .map(path -> aggregationPlan.getRealToStorageName().get(path))
+        .collect(Collectors.toList());
 
     // optimize expression to an executable one
     IExpression optimizedExpression =

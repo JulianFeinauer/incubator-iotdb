@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.iotdb.db.conf.IoTDBConstant;
 import org.apache.iotdb.db.conf.IoTDBDescriptor;
 import org.apache.iotdb.db.engine.StorageEngine;
@@ -73,7 +75,9 @@ public class AggregationExecutor {
   private int aggregateFetchSize;
 
   protected AggregationExecutor(AggregationPlan aggregationPlan) {
-    this.selectedSeries = aggregationPlan.getDeduplicatedPaths();
+    this.selectedSeries = aggregationPlan.getDeduplicatedPaths().stream()
+        .map(path -> aggregationPlan.getRealToStorageName().get(path))
+        .collect(Collectors.toList());
     this.dataTypes = aggregationPlan.getDeduplicatedDataTypes();
     this.aggregations = aggregationPlan.getDeduplicatedAggregations();
     this.expression = aggregationPlan.getExpression();

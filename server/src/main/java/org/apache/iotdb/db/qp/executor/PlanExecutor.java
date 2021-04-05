@@ -374,6 +374,8 @@ public class PlanExecutor implements IPlanExecutor {
     }
     queryDataSet.setRowLimit(queryPlan.getRowLimit());
     queryDataSet.setRowOffset(queryPlan.getRowOffset());
+
+    // Do proper renaming again
     return queryDataSet;
   }
 

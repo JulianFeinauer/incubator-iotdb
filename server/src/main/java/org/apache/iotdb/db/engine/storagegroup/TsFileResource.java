@@ -278,6 +278,9 @@ public class TsFileResource {
 
   public void deserialize() throws IOException {
     try (InputStream inputStream = fsFactory.getBufferedInputStream(file + RESOURCE_SUFFIX)) {
+      if (inputStream == null) {
+        throw new IOException("Issue getting filestream for TS Ressource file " + (file + RESOURCE_SUFFIX));
+      }
       int size = ReadWriteIOUtils.readInt(inputStream);
       Map<String, Integer> deviceMap = new HashMap<>();
       long[] startTimesArray = new long[size];

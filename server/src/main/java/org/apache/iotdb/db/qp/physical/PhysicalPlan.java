@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
+
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
@@ -88,7 +90,7 @@ public abstract class PhysicalPlan {
   public abstract List<PartialPath> getPaths();
 
   public void setPaths(List<PartialPath> paths) {
-
+throw new NotImplementedException("");
   }
 
   public boolean isQuery() {

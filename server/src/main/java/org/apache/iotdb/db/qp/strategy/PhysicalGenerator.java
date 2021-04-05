@@ -19,6 +19,7 @@
 package org.apache.iotdb.db.qp.strategy;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,7 +27,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.iotdb.db.auth.AuthException;
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.metadata.MetadataException;
 import org.apache.iotdb.db.exception.query.PathNumOverLimitException;
 import org.apache.iotdb.db.exception.query.LogicalOperatorException;
@@ -34,6 +39,7 @@ import org.apache.iotdb.db.exception.query.LogicalOptimizeException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.exception.runtime.SQLParserException;
 import org.apache.iotdb.db.metadata.PartialPath;
+import org.apache.iotdb.db.metadata.mnode.MeasurementMNode;
 import org.apache.iotdb.db.qp.constant.SQLConstant;
 import org.apache.iotdb.db.qp.logical.Operator;
 import org.apache.iotdb.db.qp.logical.Operator.OperatorType;
@@ -108,7 +114,11 @@ import org.apache.iotdb.db.qp.physical.sys.TracingPlan;
 import org.apache.iotdb.db.service.IoTDB;
 import org.apache.iotdb.db.utils.SchemaUtils;
 import org.apache.iotdb.tsfile.file.metadata.enums.TSDataType;
+import org.apache.iotdb.tsfile.read.expression.ExpressionVisitor;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
+import org.apache.iotdb.tsfile.read.expression.impl.BinaryExpression;
+import org.apache.iotdb.tsfile.read.expression.impl.GlobalTimeExpression;
+import org.apache.iotdb.tsfile.read.expression.impl.SingleSeriesExpression;
 import org.apache.iotdb.tsfile.utils.Pair;
 
 
@@ -185,8 +195,12 @@ public class PhysicalGenerator {
                   insert.getMeasurementList().length, insert.getValueList().length));
         }
 
-        return new InsertRowPlan(paths.get(0), insert.getTime(),
+        final InsertRowPlan insertRowPlan = new InsertRowPlan(paths.get(0), insert.getTime(),
             insert.getMeasurementList(), insert.getValueList());
+
+        rename(insertRowPlan);
+
+        return insertRowPlan;
       case MERGE:
         if (operator.getTokenIntType() == SQLConstant.TOK_FULL_MERGE) {
           return new MergePlan(OperatorType.FULL_MERGE);
@@ -283,6 +297,19 @@ public class PhysicalGenerator {
         return new CreateSnapshotPlan();
       default:
         throw new LogicalOperatorException(operator.getType().toString(), "");
+    }
+  }
+
+  private void rename(InsertRowPlan insertRowPlan) {
+    final List<PartialPath> paths = insertRowPlan.getPaths();
+    for (int i = 0; i < paths.size(); i++) {
+      final PartialPath path = paths.get(i);
+
+      final PartialPath newPath = renamePath(path);
+
+      insertRowPlan.setDeviceId(newPath.getDevicePath());
+      insertRowPlan.getMeasurements()[i] = newPath.getMeasurement();
+
     }
   }
 
@@ -596,12 +623,85 @@ public class PhysicalGenerator {
       throw new QueryProcessException(e);
     }
 
+    // ...
+    rename(queryPlan);
+
     queryPlan.setRowLimit(queryOperator.getRowLimit());
     queryPlan.setRowOffset(queryOperator.getRowOffset());
     queryPlan.setAscending(queryOperator.isAscending());
 
     return queryPlan;
   }
+
+  private void rename(QueryPlan queryPlan) {
+
+    final List<PartialPath> paths = queryPlan.getPaths();
+      for (int i = 0; i < paths.size(); i++) {
+        final PartialPath path = paths.get(i);
+
+        PartialPath newPath = renamePath(path);
+
+        // Rename it
+//        paths.set(i, newPath);
+
+        queryPlan.getRealToStorageName().put(path, newPath);
+      }
+
+      if (queryPlan instanceof AggregationPlan) {
+        final AggregationPlan aggregationPlan = (AggregationPlan) queryPlan;
+
+        if (aggregationPlan.getExpression() == null) {
+          return;
+        }
+
+        try {
+          IExpression renamedExpression = aggregationPlan.getExpression().accept(new RenamingVisitor(aggregationPlan));
+          // renamedExpression = aggregationPlan.getExpression();
+          aggregationPlan.setExpression(renamedExpression);
+        } catch (QueryProcessException e) {
+          throw new IllegalStateException("This should not happen!");
+        }
+      }
+  }
+
+  private static class RenamingVisitor implements ExpressionVisitor<IExpression> {
+
+    private final AggregationPlan plan;
+
+    public RenamingVisitor(AggregationPlan plan) {
+      this.plan = plan;
+    }
+
+    @Override
+    public IExpression visit(BinaryExpression.AndExpression andExpression) {
+      return new BinaryExpression.AndExpression(andExpression.left.accept(this), andExpression.right.accept(this));
+    }
+
+    @Override
+    public IExpression visit(BinaryExpression.OrExpression orExpression) {
+      return new BinaryExpression.OrExpression(orExpression.left.accept(this), orExpression.right.accept(this));
+    }
+
+    @Override
+    public IExpression visit(SingleSeriesExpression singleSeriesExpression) {
+      return new SingleSeriesExpression(plan.getRealToStorageName().get(singleSeriesExpression.getSeriesPath()), singleSeriesExpression.getFilter());
+    }
+
+    @Override
+    public IExpression visit(GlobalTimeExpression globalTimeExpression) {
+      return globalTimeExpression;
+    }
+  }
+
+  private PartialPath renamePath(PartialPath path) {
+    try {
+      final MeasurementMNode mNode = (MeasurementMNode) IoTDB.metaManager.getNodeByPath(path);
+      return new PartialPath(path.getDevice()).concatPath(new PartialPath(path.getMeasurement() + "abc"));
+    } catch (MetadataException e) {
+      throw new RuntimeException("Unable to handle query", e);
+    }
+  }
+
 
   // e.g. translate "select * from root.ln.d1, root.ln.d2 where s1 < 20 AND s2 > 10" to
   // [root.ln.d1 -> root.ln.d1.s1 < 20 AND root.ln.d1.s2 > 10,

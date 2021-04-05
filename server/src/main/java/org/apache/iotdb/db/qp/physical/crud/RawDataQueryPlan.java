@@ -25,6 +25,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.apache.iotdb.db.exception.metadata.IllegalPathException;
 import org.apache.iotdb.db.exception.query.QueryProcessException;
 import org.apache.iotdb.db.metadata.PartialPath;
 import org.apache.iotdb.db.qp.logical.Operator;
@@ -91,7 +94,24 @@ public class RawDataQueryPlan extends QueryPlan {
   }
 
   public Set<String> getAllMeasurementsInDevice(String device) {
-    return deviceToMeasurements.getOrDefault(device, Collections.emptySet());
+    final Set<String> measurements = deviceToMeasurements.getOrDefault(device, Collections.emptySet());
+    Set<String> transformedSet = measurements.stream()
+        .map(meas -> {
+          try {
+            return this.getRealToStorageName().get(new PartialPath(device, meas)).getMeasurement();
+          } catch (IllegalPathException e) {
+            throw new IllegalStateException("This should not happen here!");
+          }
+        })
+        .collect(Collectors.toSet());
+
+    System.out.println("Before: " + measurements);
+    System.out.println("After: " + transformedSet);
+
+    if (measurements.size() != transformedSet.size()) {
+      throw new RuntimeException("Here went something from....");
+    }
+    return transformedSet;
   }
 
   public void addFilterPathInDeviceToMeasurements(Path path) {

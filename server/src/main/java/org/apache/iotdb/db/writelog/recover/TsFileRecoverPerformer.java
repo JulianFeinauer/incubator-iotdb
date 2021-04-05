@@ -157,6 +157,7 @@ public class TsFileRecoverPerformer {
   }
 
   private void recoverResourceFromFile() throws IOException {
+    // TODO jf read date here from mapDB
     try {
       tsFileResource.deserialize();
     } catch (IOException e) {
@@ -168,6 +169,7 @@ public class TsFileRecoverPerformer {
 
 
   private void recoverResourceFromReader() throws IOException {
+    // TODO jf read data here as backup
     try (TsFileSequenceReader reader =
         new TsFileSequenceReader(tsFileResource.getTsFile().getAbsolutePath(), true)) {
       for (Entry<String, List<TimeseriesMetadata>> entry : reader.getAllTimeseriesMetadata()

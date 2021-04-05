@@ -21,6 +21,7 @@ package org.apache.iotdb.tsfile.read.expression.impl;
 import java.io.Serializable;
 
 import org.apache.iotdb.tsfile.read.expression.ExpressionType;
+import org.apache.iotdb.tsfile.read.expression.ExpressionVisitor;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 import org.apache.iotdb.tsfile.read.expression.IUnaryExpression;
 import org.apache.iotdb.tsfile.read.filter.basic.Filter;
@@ -52,6 +53,11 @@ public class GlobalTimeExpression implements IUnaryExpression, Serializable {
   @Override
   public IExpression clone() {
     return new GlobalTimeExpression(filter.copy());
+  }
+
+  @Override
+  public <R> R accept(ExpressionVisitor<R> visitor) {
+    return visitor.visit(this);
   }
 
   @Override

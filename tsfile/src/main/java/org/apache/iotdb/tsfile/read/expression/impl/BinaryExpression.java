@@ -21,6 +21,7 @@ package org.apache.iotdb.tsfile.read.expression.impl;
 import java.io.Serializable;
 
 import org.apache.iotdb.tsfile.read.expression.ExpressionType;
+import org.apache.iotdb.tsfile.read.expression.ExpressionVisitor;
 import org.apache.iotdb.tsfile.read.expression.IBinaryExpression;
 import org.apache.iotdb.tsfile.read.expression.IExpression;
 
@@ -39,7 +40,7 @@ public abstract class BinaryExpression implements IBinaryExpression, Serializabl
   @Override
   public abstract IExpression clone();
 
-  protected static class AndExpression extends BinaryExpression {
+  public static class AndExpression extends BinaryExpression {
 
     public IExpression left;
     public IExpression right;
@@ -80,12 +81,17 @@ public abstract class BinaryExpression implements IBinaryExpression, Serializabl
     }
 
     @Override
+    public <R> R accept(ExpressionVisitor<R> visitor) {
+      return visitor.visit(this);
+    }
+
+    @Override
     public String toString() {
       return "[" + left + " && " + right + "]";
     }
   }
 
-  protected static class OrExpression extends BinaryExpression {
+  public static class OrExpression extends BinaryExpression {
 
     public IExpression left;
     public IExpression right;
@@ -123,6 +129,11 @@ public abstract class BinaryExpression implements IBinaryExpression, Serializabl
     @Override
     public IExpression clone() {
       return new OrExpression(left.clone(), right.clone());
+    }
+
+    @Override
+    public <R> R accept(ExpressionVisitor<R> visitor) {
+      return visitor.visit(this);
     }
 
     @Override
