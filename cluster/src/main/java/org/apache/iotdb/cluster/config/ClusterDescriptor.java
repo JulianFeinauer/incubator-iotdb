@@ -34,10 +34,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ClusterDescriptor {
 
@@ -309,10 +307,45 @@ public class ClusterDescriptor {
       config.setConsistencyLevel(ConsistencyLevel.getConsistencyLevel(consistencyLevel));
     }
 
-    String seedUrls = properties.getProperty("seed_nodes");
-    if (seedUrls != null) {
-      List<String> urlList = getSeedUrlList(seedUrls);
-      config.setSeedNodeUrls(urlList);
+    // In Case of a Kubernetes Deployment we need to do things a tiny bit different
+    boolean kubernetes = System.getenv("KUBERNETES") != null;
+
+    if (!kubernetes) {
+      String seedUrls = properties.getProperty("seed_nodes");
+      if (seedUrls != null) {
+        List<String> urlList = getSeedUrlList(seedUrls);
+        config.setSeedNodeUrls(urlList);
+      }
+    } else {
+      logger.info("Running on Kubernetes, reading from DNS...");
+
+      int sleep = Integer.parseInt(System.getenv("SLEEP"));
+
+      try {
+        Thread.sleep(sleep);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      String hostname = System.getenv("KUB_HOST");
+      logger.info("Resolving Hostname {}", hostname);
+      try {
+        InetAddress[] addresses = InetAddress.getAllByName(hostname);
+        for (InetAddress address : addresses) {
+          logger.info("Found POD " + address.getHostAddress());
+        }
+
+        List<String> seeds =
+            Arrays.stream(addresses)
+                .map(address -> address.getHostAddress() + ":" + config.getInternalMetaPort())
+                .collect(Collectors.toList());
+
+        logger.info("Setting Seeds as {}", seeds);
+
+        config.setSeedNodeUrls(seeds);
+      } catch (UnknownHostException e) {
+        throw new RuntimeException("Unable to get Pods from Kubernetes DNS", e);
+      }
     }
   }
 

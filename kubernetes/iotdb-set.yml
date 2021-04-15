@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: iotdb-external
+  labels:
+    app: iotdb
+spec:
+  ports:
+  - port: 6667
+    name: iotdb-external
+  selector:
+    app: iotdb
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iotdb
+  labels:
+    app: iotdb
+spec:
+  ports:
+  - port: 6667
+    name: iotdb
+  clusterIP: None
+  type: ClusterIP
+  selector:
+    app: iotdb
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: iotdb
+spec:
+  selector:
+    matchLabels:
+      app: iotdb # has to match .spec.template.metadata.labels
+  serviceName: "nginx"
+  replicas: 3 # by default is 1
+  template:
+    metadata:
+      labels:
+        app: iotdb # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: iotdb
+        # image: apache/iotdb:0.11.2
+        image: jfeinauer/iotdb-experiment:0.1.5
+        command:
+          - "/iotdb/sbin/start-node.sh"
+        env:
+          - name: KUBERNETES
+            value: "TRUE"
+          - name: KUB_HOST
+            value: "iotdb"
+          - name: SLEEP
+            value: "30000"
+        ports:
+        - containerPort: 6667
+          name: iotdb
+        - containerPort: 9003
+          name: metaport
+        volumeMounts:
+        - name: storage
+          mountPath: /iotdb/data
+        # TODO Improve the Readiness Probe
+#        readinessProbe:
+#          tcpSocket:
+#            port: 6667
+#          initialDelaySeconds: 10
+#          periodSeconds: 10
+#        livenessProbe:
+#          tcpSocket:
+#            port: 6667
+#          initialDelaySeconds: 10
+#          periodSeconds: 10
+  volumeClaimTemplates:
+  - metadata:
+      name: storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
