@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "apache-iotdb.fullname" . }}-set
+spec:
+  selector:
+    matchLabels:
+      {{- include "apache-iotdb.selectorLabels" . | nindent 6 }}
+  serviceName: {{ include "apache-iotdb.fullname" . }}
+  replicas: 1 # by default is 1
+  template:
+    metadata:
+      labels:
+        {{- include "apache-iotdb.labels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: iotdb
+          image: apache/iotdb:0.11.2
+          ports:
+            - containerPort: 6667
+              name: iotdb
+          volumeMounts:
+            - name: storage
+              mountPath: /iotdb/data
+          # TODO Improve the Readiness Probe
+          readinessProbe:
+            tcpSocket:
+              port: 6667
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 6667
+            initialDelaySeconds: 10
+            periodSeconds: 10
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 10Gi
