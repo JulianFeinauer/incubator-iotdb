@@ -128,7 +128,23 @@ public class ClusterDescriptor {
         logger.warn("Fail to find config file {}", url, e);
       }
     }
-    config.setInternalIp(properties.getProperty("internal_ip", config.getInternalIp()));
+
+    boolean kubernetes = System.getenv("KUBERNETES") != null;
+
+    if (!kubernetes) {
+      config.setInternalIp(properties.getProperty("internal_ip", config.getInternalIp()));
+    } else {
+      String localhost = null;
+      try {
+        localhost = InetAddress.getLocalHost().getHostAddress();
+
+        logger.info("Running on Kubernetes, using internal_ip {}", localhost);
+
+        config.setInternalIp(localhost);
+      } catch (UnknownHostException e) {
+        throw new RuntimeException("Unable to get local adress", e);
+      }
+    }
 
     config.setInternalMetaPort(
         Integer.parseInt(
@@ -308,8 +324,6 @@ public class ClusterDescriptor {
     }
 
     // In Case of a Kubernetes Deployment we need to do things a tiny bit different
-    boolean kubernetes = System.getenv("KUBERNETES") != null;
-
     if (!kubernetes) {
       String seedUrls = properties.getProperty("seed_nodes");
       if (seedUrls != null) {
